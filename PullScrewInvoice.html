@@ -1,0 +1,2630 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PullScrew Invoice</title>
+<style>
+/* ---------------------------------------------------------------- reset */
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%}
+body{font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+table{border-collapse:collapse;width:100%}
+a{color:var(--accent);text-decoration:none}
+h1,h2,h3,h4{margin:0;font-weight:600;letter-spacing:-.01em}
+
+/* --------------------------------------------------------------- tokens */
+:root{
+  --bg:#f4f6f8; --surface:#fff; --surface-2:#f9fafb; --surface-3:#eef1f4;
+  --border:#e0e5ea; --border-strong:#c9d1d9;
+  --text:#13181d; --text-2:#4a545e; --muted:#79838e;
+  --accent:#1a7f5a; --accent-fg:#fff; --accent-soft:#e6f4ee; --accent-line:#b9dfcd;
+  --danger:#c0392b; --danger-soft:#fdecea;
+  --warn:#a86612; --warn-soft:#fdf3e2;
+  --ok:#1a7f5a; --ok-soft:#e6f4ee;
+  --info:#2b5f9e; --info-soft:#e9f0f9;
+  --shadow:0 1px 2px rgba(16,24,32,.05),0 4px 16px -6px rgba(16,24,32,.12);
+  --shadow-lg:0 8px 40px -8px rgba(16,24,32,.28);
+  --r:8px; --r-lg:12px;
+}
+:root[data-theme="dark"]{
+  --bg:#0f1418; --surface:#171d23; --surface-2:#1d242b; --surface-3:#242c34;
+  --border:#2a333c; --border-strong:#3a454f;
+  --text:#e8edf2; --text-2:#aeb9c4; --muted:#7d8894;
+  --accent:#3dbd8b; --accent-fg:#06120d; --accent-soft:#152c23; --accent-line:#28513f;
+  --danger:#f0705f; --danger-soft:#331d1a;
+  --warn:#e0a750; --warn-soft:#33280f;
+  --ok:#3dbd8b; --ok-soft:#152c23;
+  --info:#6ba3e8; --info-soft:#152435;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 16px -6px rgba(0,0,0,.5);
+  --shadow-lg:0 8px 40px -8px rgba(0,0,0,.7);
+}
+
+/* ---------------------------------------------------------------- shell */
+#app{display:flex;min-height:100vh}
+#sidebar{width:224px;flex:0 0 224px;background:var(--surface);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.brand{padding:20px 18px 16px;display:flex;align-items:center;gap:10px}
+.brand-mark{width:28px;height:28px;border-radius:7px;background:var(--accent);color:var(--accent-fg);
+  display:grid;place-items:center;font-weight:700;font-size:13px;letter-spacing:-.03em;flex:0 0 28px}
+.brand-name{font-weight:650;font-size:14px;letter-spacing:-.015em;line-height:1.15}
+.brand-sub{font-size:11px;color:var(--muted);letter-spacing:.02em}
+nav{padding:4px 10px;flex:1;overflow-y:auto}
+.nav-label{font-size:10.5px;font-weight:650;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--muted);padding:14px 8px 6px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:6px;
+  color:var(--text-2);font-weight:500;font-size:13.5px;width:100%;text-align:left;margin-bottom:1px}
+.nav-item:hover{background:var(--surface-3);color:var(--text)}
+.nav-item.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.nav-item .ic{width:16px;flex:0 0 16px;opacity:.85}
+.nav-item .count{margin-left:auto;font-size:11px;font-weight:600;color:var(--muted);
+  font-variant-numeric:tabular-nums}
+.sidebar-foot{padding:10px;border-top:1px solid var(--border);display:flex;gap:6px;align-items:center}
+.storage-chip{flex:1;min-width:0;font-size:11px;color:var(--muted);line-height:1.3}
+.storage-chip b{display:block;color:var(--text-2);font-weight:600;font-size:11.5px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:14px 26px;
+  display:flex;align-items:center;gap:14px;min-height:60px}
+.topbar h1{font-size:19px;letter-spacing:-.02em}
+.topbar .sub{font-size:12.5px;color:var(--muted);margin-top:1px}
+.topbar-actions{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.view{padding:22px 26px 64px;flex:1}
+
+/* ------------------------------------------------------------ primitives */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:7px;
+  border:1px solid var(--border-strong);background:var(--surface);color:var(--text);
+  font-size:13px;font-weight:550;white-space:nowrap;transition:background .12s,border-color .12s}
+.btn:hover{background:var(--surface-3)}
+.btn:active{transform:translateY(.5px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.danger{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 35%,var(--border))}
+.btn.danger:hover{background:var(--danger-soft)}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.ghost:hover{background:var(--surface-3)}
+.btn.sm{padding:4px 9px;font-size:12px;border-radius:6px}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.icon-btn{width:30px;height:30px;display:grid;place-items:center;border-radius:6px;color:var(--muted)}
+.icon-btn:hover{background:var(--surface-3);color:var(--text)}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);
+  box-shadow:var(--shadow)}
+.card-pad{padding:18px 20px}
+.card-head{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;
+  align-items:center;gap:10px}
+.card-head h3{font-size:14px}
+.card-head .right{margin-left:auto;display:flex;gap:6px}
+
+label.f{display:block;margin-bottom:12px}
+label.f>span{display:block;font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:5px}
+label.f>span .hint{font-weight:400;color:var(--muted)}
+.inp{width:100%;padding:8px 11px;border:1px solid var(--border-strong);border-radius:7px;
+  background:var(--surface);transition:border-color .12s,box-shadow .12s}
+.inp:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.inp::placeholder{color:var(--muted)}
+textarea.inp{resize:vertical;min-height:70px;line-height:1.5}
+select.inp{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),
+  linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 15px) calc(50% + 1px),calc(100% - 10px) calc(50% + 1px);
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:30px}
+.num{font-variant-numeric:tabular-nums}
+.inp.num,.inp.money{text-align:right;font-variant-numeric:tabular-nums}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 14px}
+.row{display:flex;gap:10px;align-items:center}
+.spacer{flex:1}
+
+.badge{display:inline-flex;align-items:center;gap:5px;padding:2.5px 8px;border-radius:20px;
+  font-size:11.5px;font-weight:600;letter-spacing:.01em;white-space:nowrap}
+.badge::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
+.badge.draft{background:var(--surface-3);color:var(--muted)}
+.badge.sent{background:var(--info-soft);color:var(--info)}
+.badge.partial{background:var(--warn-soft);color:var(--warn)}
+.badge.paid{background:var(--ok-soft);color:var(--ok)}
+.badge.overdue{background:var(--danger-soft);color:var(--danger)}
+.badge.cancelled{background:var(--surface-3);color:var(--muted);text-decoration:line-through}
+.badge.accepted{background:var(--ok-soft);color:var(--ok)}
+.badge.declined{background:var(--danger-soft);color:var(--danger)}
+.badge.expired{background:var(--warn-soft);color:var(--warn)}
+.badge.converted{background:var(--accent-soft);color:var(--accent)}
+
+/* --------------------------------------------------------------- tables */
+.tbl-wrap{overflow-x:auto}
+.tbl{font-size:13.5px}
+.tbl th{text-align:left;font-size:11px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--muted);padding:9px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+.tbl td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:0}
+.tbl tbody tr:hover{background:var(--surface-2)}
+.tbl .r{text-align:right;font-variant-numeric:tabular-nums}
+.tbl .clickable{cursor:pointer}
+.tbl .mono-num{font-variant-numeric:tabular-nums;font-weight:550}
+.tbl .acts{text-align:right;white-space:nowrap;width:1%}
+.tbl .acts .btn{margin-left:4px}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:22px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:15px 17px;box-shadow:var(--shadow)}
+.stat .k{font-size:11.5px;font-weight:650;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.stat .v{font-size:25px;font-weight:660;letter-spacing:-.03em;margin-top:7px;
+  font-variant-numeric:tabular-nums;line-height:1.1}
+.stat .v.sm{font-size:19px}
+.stat .m{font-size:12px;color:var(--muted);margin-top:4px}
+.stat.alert .v{color:var(--danger)}
+
+.empty{text-align:center;padding:56px 20px;color:var(--muted)}
+.empty h3{font-size:15px;color:var(--text-2);margin-bottom:6px}
+.empty p{margin:0 0 16px;font-size:13px;max-width:380px;margin-inline:auto}
+
+.toolbar{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.search{position:relative;flex:1;min-width:180px;max-width:320px}
+.search .inp{padding-left:31px}
+.search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.seg{display:inline-flex;background:var(--surface-3);border-radius:7px;padding:2px}
+.seg button{padding:5px 11px;border-radius:5px;font-size:12.5px;font-weight:550;color:var(--text-2)}
+.seg button.on{background:var(--surface);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+
+/* --------------------------------------------------------------- modals */
+#modal-root{position:fixed;inset:0;z-index:200;display:none}
+#modal-root.open{display:block}
+.backdrop{position:absolute;inset:0;background:rgba(10,14,18,.45);backdrop-filter:blur(2px)}
+.modal{position:relative;margin:6vh auto;max-width:520px;width:calc(100% - 32px);
+  background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--shadow-lg);
+  max-height:88vh;display:flex;flex-direction:column;border:1px solid var(--border)}
+.modal.wide{max-width:760px}
+.modal-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center}
+.modal-head h3{font-size:15px}
+.modal-body{padding:18px 20px;overflow-y:auto}
+.modal-foot{padding:13px 20px;border-top:1px solid var(--border);display:flex;gap:8px;
+  justify-content:flex-end;background:var(--surface-2);border-radius:0 0 var(--r-lg) var(--r-lg)}
+
+#toasts{position:fixed;bottom:18px;right:18px;z-index:300;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);
+  border-radius:var(--r);padding:11px 15px;box-shadow:var(--shadow-lg);font-size:13px;font-weight:500;
+  max-width:340px;animation:slidein .18s ease-out}
+.toast.err{border-left-color:var(--danger)}
+@keyframes slidein{from{opacity:0;transform:translateX(14px)}}
+
+.banner{background:var(--warn-soft);border:1px solid color-mix(in srgb,var(--warn) 30%,transparent);
+  color:var(--warn);border-radius:var(--r);padding:10px 14px;margin-bottom:16px;font-size:13px;
+  display:flex;align-items:center;gap:10px}
+.banner .btn{margin-left:auto;background:transparent;border-color:currentColor;color:inherit}
+
+/* ------------------------------------------------------------ doc editor */
+.editor-grid{display:grid;grid-template-columns:1fr 300px;gap:18px;align-items:start}
+.items-tbl{font-size:13.5px}
+.items-tbl th{font-size:10.5px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--muted);padding:0 8px 7px;text-align:left}
+.items-tbl th.r{text-align:right}
+.items-tbl td{padding:3px 4px;vertical-align:top}
+.items-tbl .inp{padding:7px 9px}
+.items-tbl .drag{color:var(--muted);cursor:grab;padding:9px 2px;text-align:center;width:20px}
+.items-tbl tr.dragging{opacity:.4}
+.totals{margin-left:auto;width:280px;font-size:13.5px}
+.totals .l{display:flex;justify-content:space-between;padding:6px 0;color:var(--text-2)}
+.totals .l .v{font-variant-numeric:tabular-nums;font-weight:550;color:var(--text)}
+.totals .l.total{border-top:1px solid var(--border-strong);margin-top:5px;padding-top:10px;
+  font-size:16px;font-weight:650;color:var(--text)}
+.totals .l.total .v{font-size:17px;font-weight:680}
+.totals .l.bal{color:var(--danger);font-weight:650}
+.totals .l.bal .v{color:var(--danger)}
+.chk{display:inline-flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;user-select:none}
+.chk input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer}
+
+.dsec{border-top:1px solid var(--border);padding-top:14px;margin-top:14px}
+.dsec-t{font-size:12px;font-weight:650;color:var(--text-2);margin-bottom:6px}
+.dsec-b{font-size:12.5px;color:var(--muted);line-height:1.55;margin-bottom:11px}
+.dsec code{background:var(--surface-3);padding:1px 5px;border-radius:4px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:var(--text-2);
+  overflow-wrap:anywhere;word-break:break-all}
+
+.logo-drop{border:1.5px dashed var(--border-strong);border-radius:var(--r);padding:18px;
+  text-align:center;color:var(--muted);font-size:12.5px;cursor:pointer;background:var(--surface-2)}
+.logo-drop:hover{border-color:var(--accent);color:var(--accent)}
+.logo-prev{display:flex;align-items:center;gap:14px}
+.logo-prev img{max-width:160px;max-height:72px;object-fit:contain;
+  background:#fff;border:1px solid var(--border);border-radius:6px;padding:6px}
+
+/* --------------------------------------------------------------- paper */
+.paper-wrap{background:var(--surface-3);padding:26px;border-radius:var(--r-lg);
+  display:flex;justify-content:center}
+.paper{background:#fff;color:#14181d;width:8.5in;min-height:11in;padding:.6in .65in;
+  box-shadow:0 4px 30px -6px rgba(0,0,0,.28);font-size:11pt;line-height:1.45}
+.paper.a4{width:210mm;min-height:297mm;padding:15mm 16mm}
+.paper *{color:inherit}
+.pp-top{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin-bottom:26px}
+.pp-logo{max-width:2.1in;max-height:.85in;object-fit:contain;object-position:left top;display:block;
+  margin-bottom:9px}
+.pp-co-name{font-size:15pt;font-weight:680;letter-spacing:-.01em;line-height:1.2;margin-bottom:4px}
+.pp-co-meta{font-size:9pt;line-height:1.5;color:#4a545e;white-space:pre-line}
+.pp-title{text-align:right;flex:0 0 auto}
+.pp-title h2{font-size:24pt;font-weight:300;letter-spacing:.1em;text-transform:uppercase;
+  line-height:1;color:#14181d}
+.pp-num{font-size:11pt;font-weight:650;margin-top:7px;font-variant-numeric:tabular-nums}
+.pp-dates{margin-top:11px;font-size:9pt;color:#4a545e}
+.pp-dates div{display:flex;justify-content:flex-end;gap:12px;padding:1.5px 0}
+.pp-dates b{font-weight:600;color:#14181d;font-variant-numeric:tabular-nums;min-width:80px;text-align:right}
+.pp-parties{display:flex;gap:34px;margin-bottom:22px}
+.pp-party{flex:1}
+.pp-party .lbl{font-size:8pt;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
+  color:#79838e;margin-bottom:5px}
+.pp-party .nm{font-weight:650;font-size:10.5pt;margin-bottom:2px}
+.pp-party .meta{font-size:9pt;line-height:1.5;color:#4a545e;white-space:pre-line}
+.pp-subject{font-size:10pt;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #e0e5ea}
+.pp-subject b{font-weight:650}
+table.pp-items{width:100%;margin-bottom:14px}
+table.pp-items th{font-size:8pt;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:#79838e;padding:0 0 7px;border-bottom:1.5px solid #14181d;text-align:left}
+table.pp-items th.r{text-align:right}
+table.pp-items td{padding:9px 0;border-bottom:1px solid #eef1f4;font-size:10pt;vertical-align:top}
+table.pp-items td.r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.pp-items th.qty,table.pp-items td.qty{width:.7in;text-align:right}
+table.pp-items th.rate,table.pp-items td.rate{width:1.15in}
+table.pp-items th.amt,table.pp-items td.amt{width:1.25in}
+table.pp-items td.desc{padding-right:16px;white-space:pre-line}
+table.pp-items td .tx{font-size:8pt;color:#79838e}
+.pp-bottom{display:flex;gap:30px;align-items:flex-start;margin-top:6px}
+.pp-notes{flex:1;font-size:9pt;color:#4a545e}
+.pp-notes .blk{margin-bottom:14px}
+.pp-notes .lbl{font-size:8pt;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
+  color:#79838e;margin-bottom:4px}
+.pp-notes .body{white-space:pre-line;line-height:1.5}
+.pp-tot{flex:0 0 2.9in;font-size:10pt}
+.pp-tot .l{display:flex;justify-content:space-between;padding:4.5px 0;color:#4a545e}
+.pp-tot .l span:last-child{font-variant-numeric:tabular-nums;color:#14181d;font-weight:550}
+.pp-tot .l.grand{border-top:1.5px solid #14181d;margin-top:6px;padding-top:9px;
+  font-size:12pt;font-weight:680;color:#14181d}
+.pp-tot .l.grand span:last-child{font-weight:700;font-size:13pt}
+.pp-tot .l.due{background:#f4f6f8;margin-top:8px;padding:9px 11px;border-radius:5px;
+  font-weight:680;color:#14181d;font-size:11pt}
+.pp-bank{margin-top:26px;padding-top:14px;border-top:1px solid #e0e5ea;
+  display:flex;gap:34px;font-size:9pt}
+.pp-bank .lbl{font-size:8pt;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
+  color:#79838e;margin-bottom:5px}
+.pp-bank dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:2px 12px;color:#4a545e}
+.pp-bank dt{font-weight:400}
+.pp-bank dd{margin:0;font-weight:600;color:#14181d}
+.pp-foot{margin-top:22px;padding-top:11px;border-top:1px solid #eef1f4;
+  font-size:8.5pt;color:#79838e;text-align:center;line-height:1.5;white-space:pre-line}
+.pp-paid-stamp{display:inline-block;border:2.5px solid #1a7f5a;color:#1a7f5a;
+  padding:3px 14px;border-radius:5px;font-weight:700;letter-spacing:.14em;font-size:11pt;
+  transform:rotate(-4deg);margin-top:10px}
+
+/* --------------------------------------------------------------- print */
+@media print{
+  html,body{background:#fff!important}
+  #sidebar,.topbar,#toasts,.no-print{display:none!important}
+  #app{display:block}
+  .view{padding:0!important}
+  .paper-wrap{padding:0;background:none;display:block;border-radius:0}
+  .paper{width:auto;min-height:0;box-shadow:none;padding:.55in .6in;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .paper.a4{width:auto;padding:14mm 15mm}
+  table.pp-items tr{break-inside:avoid}
+  .pp-bottom,.pp-bank{break-inside:avoid}
+}
+
+/* --------------------------------------------------------------- responsive */
+@media (max-width:900px){
+  .editor-grid{grid-template-columns:1fr}
+  .paper{width:100%;min-height:0;padding:24px}
+  .paper-wrap{padding:0;background:none}
+}
+@media (max-width:760px){
+  #app{flex-direction:column}
+  #sidebar{width:100%;flex:none;height:auto;position:static;border-right:0;
+    border-bottom:1px solid var(--border);flex-direction:row;align-items:center;overflow-x:auto}
+  .brand{padding:12px 14px}
+  .brand-sub{display:none}
+  nav{display:flex;padding:8px;gap:4px;align-items:center;flex:1}
+  .nav-label{display:none}
+  .nav-item{width:auto;padding:6px 10px;white-space:nowrap}
+  .nav-item .count{display:none}
+  .sidebar-foot{border-top:0;border-left:1px solid var(--border)}
+  .storage-chip{display:none}
+  .topbar,.view{padding-inline:15px}
+  .grid2,.grid3{grid-template-columns:1fr}
+  .pp-top,.pp-parties,.pp-bottom,.pp-bank{flex-direction:column;gap:16px}
+  .pp-title{text-align:left}
+  .pp-dates div{justify-content:flex-start}
+  .pp-tot{flex:1;width:100%}
+}
+</style>
+<style id="pageStyle">@page{size:letter portrait;margin:0}</style>
+</head>
+<body>
+
+<div id="app">
+  <aside id="sidebar">
+    <div class="brand">
+      <div class="brand-mark" id="brandMark">PS</div>
+      <div style="min-width:0">
+        <div class="brand-name" id="brandName">PullScrew</div>
+        <div class="brand-sub">Invoicing</div>
+      </div>
+    </div>
+    <nav id="nav"></nav>
+    <div class="sidebar-foot">
+      <div class="storage-chip" id="storageChip"><b>&nbsp;</b>&nbsp;</div>
+      <button class="icon-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <main>
+    <header class="topbar no-print">
+      <div style="min-width:0">
+        <h1 id="pageTitle">Dashboard</h1>
+        <div class="sub" id="pageSub"></div>
+      </div>
+      <div class="topbar-actions" id="pageActions"></div>
+    </header>
+    <div class="view" id="view"></div>
+  </main>
+</div>
+
+<div id="modal-root"><div class="backdrop" data-close></div><div class="modal" id="modal"></div></div>
+<div id="toasts"></div>
+
+<script>
+"use strict";
+/* ==========================================================================
+   PullScrew Invoice — single-file offline invoicing
+   No build step, no network, no dependencies. Edit this file directly.
+   Money is stored as integer minor units (cents). Quantities as integer
+   thousandths. There are no floats in the data model.
+   ========================================================================== */
+
+/* ------------------------------------------------------------------ utils */
+const $ = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
+const esc = (s) => String(s == null ? "" : s)
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+const attr = (s) => esc(s);
+const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
+
+function toast(msg, kind) {
+  const el = document.createElement("div");
+  el.className = "toast" + (kind === "err" ? " err" : "");
+  el.textContent = msg;
+  $("#toasts").appendChild(el);
+  setTimeout(() => { el.style.opacity = "0"; el.style.transition = "opacity .25s"; }, 2600);
+  setTimeout(() => el.remove(), 2900);
+}
+
+/* -------------------------------------------------------------- money math
+   All amounts are integers in minor units. Quantities are integers in
+   thousandths so 2.5 hours is exactly 2500 — never 2.4999999. */
+const Money = {
+  // "1,234.56" -> 123456 ; "" -> 0 ; garbage -> 0
+  parse(str) {
+    if (typeof str === "number") return Math.round(str * 100);
+    const s = String(str == null ? "" : str).replace(/[^0-9.\-]/g, "");
+    if (!s || s === "-" || s === ".") return 0;
+    const neg = s.startsWith("-");
+    const parts = s.replace(/-/g, "").split(".");
+    const whole = parts[0] || "0";
+    const frac = (parts[1] || "").slice(0, 2).padEnd(2, "0");
+    const v = parseInt(whole, 10) * 100 + parseInt(frac, 10);
+    return neg ? -v : (isNaN(v) ? 0 : v);
+  },
+  // 123456 -> "1234.56" (raw, for inputs)
+  raw(cents) {
+    const n = Math.round(cents || 0);
+    const neg = n < 0, a = Math.abs(n);
+    return (neg ? "-" : "") + Math.floor(a / 100) + "." + String(a % 100).padStart(2, "0");
+  },
+  // 123456 -> "1,234.56"
+  plain(cents) {
+    const n = Math.round(cents || 0);
+    const neg = n < 0, a = Math.abs(n);
+    const whole = String(Math.floor(a / 100)).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return (neg ? "-" : "") + whole + "." + String(a % 100).padStart(2, "0");
+  },
+  // with currency symbol
+  fmt(cents, code) {
+    const c = CURRENCIES[code] || CURRENCIES.JMD;
+    const n = Math.round(cents || 0);
+    return (n < 0 ? "-" : "") + c.symbol + Money.plain(Math.abs(n));
+  }
+};
+
+const Qty = {
+  parse(str) {
+    if (typeof str === "number") return Math.round(str * 1000);
+    const s = String(str == null ? "" : str).replace(/[^0-9.\-]/g, "");
+    if (!s || s === "-" || s === ".") return 0;
+    const neg = s.startsWith("-");
+    const parts = s.replace(/-/g, "").split(".");
+    const whole = parts[0] || "0";
+    const frac = (parts[1] || "").slice(0, 3).padEnd(3, "0");
+    const v = parseInt(whole, 10) * 1000 + parseInt(frac, 10);
+    return neg ? -v : (isNaN(v) ? 0 : v);
+  },
+  fmt(milli) {
+    const n = Math.round(milli || 0);
+    const neg = n < 0, a = Math.abs(n);
+    let s = String(a % 1000).padStart(3, "0").replace(/0+$/, "");
+    return (neg ? "-" : "") + Math.floor(a / 1000) + (s ? "." + s : "");
+  }
+};
+
+const CURRENCIES = {
+  JMD: { code: "JMD", symbol: "J$", name: "Jamaican Dollar" },
+  USD: { code: "USD", symbol: "US$", name: "US Dollar" },
+  CAD: { code: "CAD", symbol: "CA$", name: "Canadian Dollar" },
+  GBP: { code: "GBP", symbol: "£", name: "Pound Sterling" },
+  EUR: { code: "EUR", symbol: "€", name: "Euro" },
+  TTD: { code: "TTD", symbol: "TT$", name: "Trinidad & Tobago Dollar" }
+};
+
+/* --------------------------------------------------------------- doc math
+   Every intermediate is an integer. Rounding happens once per line and once
+   per tax computation, half-away-from-zero. */
+function roundDiv(num, den) {
+  const s = num < 0 ? -1 : 1;
+  return s * Math.floor((Math.abs(num) + Math.floor(den / 2)) / den);
+}
+function lineTotal(item) {
+  return roundDiv((item.qtyMilli || 0) * (item.unitCents || 0), 1000);
+}
+function computeDoc(doc) {
+  const items = doc.items || [];
+  let subtotal = 0, taxableBase = 0;
+  const lines = items.map((it) => {
+    const amt = lineTotal(it);
+    subtotal += amt;
+    if (it.taxable) taxableBase += amt;
+    return amt;
+  });
+
+  // Discount applies proportionally, so tax is charged on the discounted base.
+  let discount = 0;
+  const d = doc.discount || { type: "none", value: 0 };
+  if (d.type === "pct" && d.value > 0) discount = roundDiv(subtotal * d.value, 10000);
+  else if (d.type === "amt" && d.value > 0) discount = Math.min(d.value, subtotal);
+  discount = Math.max(0, discount);
+
+  let discountedTaxable = taxableBase;
+  if (discount > 0 && subtotal > 0) {
+    discountedTaxable = taxableBase - roundDiv(discount * taxableBase, subtotal);
+  }
+
+  const rateBp = doc.taxRateBp || 0;
+  const tax = rateBp > 0 ? roundDiv(discountedTaxable * rateBp, 10000) : 0;
+
+  const total = subtotal - discount + tax;
+  const paid = (doc.payments || []).reduce((a, p) => a + (p.amountCents || 0), 0);
+  const balance = total - paid;
+
+  return { lines, subtotal, discount, taxableBase: discountedTaxable, tax, total, paid, balance };
+}
+
+/* ---------------------------------------------------------------- dates */
+const todayISO = () => new Date().toISOString().slice(0, 10);
+function addDays(iso, days) {
+  const d = new Date(iso + "T12:00:00");
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function fmtDate(iso) {
+  if (!iso) return "—";
+  const p = iso.split("-");
+  if (p.length !== 3) return iso;
+  return p[2].replace(/^0/, "") + " " + MONTHS[parseInt(p[1], 10) - 1] + " " + p[0];
+}
+function daysBetween(a, b) {
+  return Math.round((new Date(b + "T12:00:00") - new Date(a + "T12:00:00")) / 86400000);
+}
+
+/* -------------------------------------------------------------- numbering
+   Tokens: {YYYY} {YY} {MM} {DD} {####} (any run of # sets zero-padding). */
+function formatNumber(pattern, counter) {
+  const now = new Date();
+  return String(pattern || "")
+    .replace(/\{YYYY\}/g, String(now.getFullYear()))
+    .replace(/\{YY\}/g, String(now.getFullYear()).slice(2))
+    .replace(/\{MM\}/g, String(now.getMonth() + 1).padStart(2, "0"))
+    .replace(/\{DD\}/g, String(now.getDate()).padStart(2, "0"))
+    // {####} and bare #### both work; braces are consumed, not printed
+    .replace(/\{(#+)\}/g, (m, h) => String(counter).padStart(h.length, "0"))
+    .replace(/#+/g, (m) => String(counter).padStart(m.length, "0"));
+}
+
+/* ================================================================ storage
+   Three layers, best available wins:
+     1. A real file on disk (File System Access API — Chrome/Edge). Durable.
+     2. IndexedDB. Survives, but browser-managed.
+     3. localStorage. Works on file:// in every browser. ~5MB cap.
+   Export/Import JSON is always available and is the real backup story. */
+const LS_KEY = "pullscrew.invoice.v1";
+const IDB_NAME = "pullscrew-invoice";
+const IDB_STORE = "state";
+
+const Store = {
+  mode: "ls",
+  fileHandle: null,     // live handle we write through on every save
+  fileName: "",
+  pendingHandle: null,  // saved handle awaiting a click to re-grant permission
+  pendingName: "",
+  fileError: "",        // real reason the last link attempt failed
+  _idb: null,
+
+  async _openIdb() {
+    if (this._idb) return this._idb;
+    return new Promise((res, rej) => {
+      let req;
+      try { req = indexedDB.open(IDB_NAME, 1); } catch (e) { return rej(e); }
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
+      };
+      req.onsuccess = () => { this._idb = req.result; res(req.result); };
+      req.onerror = () => rej(req.error || new Error("indexedDB blocked"));
+      req.onblocked = () => rej(new Error("indexedDB blocked"));
+      setTimeout(() => rej(new Error("indexedDB timeout")), 2000);
+    });
+  },
+
+  available: true,
+
+  async init() {
+    try {
+      const db = await this._openIdb();
+      await new Promise((res, rej) => {
+        const t = db.transaction(IDB_STORE, "readonly");
+        const r = t.objectStore(IDB_STORE).get("probe");
+        r.onsuccess = res; r.onerror = () => rej(r.error);
+      });
+      this.mode = "idb";
+      this.available = true;
+      return this.mode;
+    } catch (e) {
+      this.mode = "ls";
+    }
+    // Chrome blocks IndexedDB on file:// — localStorage still works there.
+    // If that is gone too (private mode, locked-down browser) say so loudly
+    // rather than silently dropping the user's invoices.
+    try {
+      localStorage.setItem(LS_KEY + ".probe", "1");
+      localStorage.removeItem(LS_KEY + ".probe");
+      this.available = true;
+    } catch (e) {
+      this.available = false;
+    }
+    return this.mode;
+  },
+
+  async _idbGet(key) {
+    const db = await this._openIdb();
+    return new Promise((res, rej) => {
+      const t = db.transaction(IDB_STORE, "readonly");
+      const r = t.objectStore(IDB_STORE).get(key);
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    });
+  },
+  async _idbPut(key, val) {
+    const db = await this._openIdb();
+    return new Promise((res, rej) => {
+      const t = db.transaction(IDB_STORE, "readwrite");
+      t.objectStore(IDB_STORE).put(val, key);
+      t.oncomplete = res; t.onerror = () => rej(t.error);
+    });
+  },
+
+  // A FileSystemFileHandle is structured-cloneable, so IndexedDB can hold it
+  // across reloads. Without this the disk link silently dies on every refresh.
+  async saveHandle(h) {
+    try { await this._idbPut("fileHandle", h); return true; }
+    catch (e) {
+      // Without this the link works now but silently dies on the next reload
+      this.fileError = "Linked, but this browser wouldn't remember it for next time (" +
+        ((e && (e.message || e.name)) || "unknown") + "). You'll need to re-link after a reload.";
+      return false;
+    }
+  },
+  async loadHandle() { try { return await this._idbGet("fileHandle"); } catch (e) { return null; } },
+  async forgetHandle() { try { await this._idbPut("fileHandle", null); } catch (e) {} },
+
+  async load() {
+    if (this.mode === "idb") {
+      try {
+        const val = await this._idbGet("root");
+        if (val) return typeof val === "string" ? JSON.parse(val) : val;
+      } catch (e) { /* fall through to localStorage */ }
+    }
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) { /* no storage at all */ }
+    return null;
+  },
+
+  async save(state) {
+    const json = JSON.stringify(state);
+    let saved = false;
+    if (this.mode === "idb") {
+      try { await this._idbPut("root", json); saved = true; }
+      catch (e) { this.mode = "ls"; }
+    }
+    if (!saved) {
+      try { localStorage.setItem(LS_KEY, json); saved = true; this.available = true; }
+      catch (e) {
+        // QuotaExceededError means full; anything else means storage is denied
+        const full = e && /quota/i.test(e.name + " " + e.message);
+        this.available = !!full;
+        toast(full ? "Storage is full — export a backup, then remove the logo or old documents."
+                   : "This browser won't let the app save. Export a backup before closing.", "err");
+        if (!this.fileHandle) return false;
+      }
+    }
+    if (this.fileHandle) {
+      try {
+        const w = await this.fileHandle.createWritable();
+        await w.write(json); await w.close();
+      } catch (e) {
+        this.fileHandle = null;
+        toast("Lost the disk file link. Re-link it in Settings.", "err");
+      }
+    }
+    return saved;
+  },
+
+  /* The File System Access API needs more than the function to exist. A page
+     opened by double-clicking has origin "null" (an opaque origin), and the
+     API refuses to run there — which is exactly the double-click case. Report
+     the specific reason so the UI can say something true. */
+  fileSupport() {
+    if (typeof window.showSaveFilePicker !== "function") return { ok: false, why: "browser" };
+    if (location.protocol === "file:") return { ok: false, why: "file-origin" };
+    if (!window.isSecureContext) return { ok: false, why: "insecure" };
+    return { ok: true, why: "" };
+  },
+  supportsFile() { return this.fileSupport().ok; },
+
+  async linkFile(state) {
+    const h = await window.showSaveFilePicker({
+      suggestedName: "pullscrew-invoice-data.json",
+      types: [{ description: "JSON data", accept: { "application/json": [".json"] } }]
+    });
+    this.fileHandle = h;
+    this.fileName = h.name;
+    this.pendingHandle = null;
+    this.fileError = "";
+    await this.saveHandle(h);
+    await this.save(state);
+    return h.name;
+  },
+
+  async openFile() {
+    const [h] = await window.showOpenFilePicker({
+      types: [{ description: "JSON data", accept: { "application/json": [".json"] } }]
+    });
+    const f = await h.getFile();
+    const data = JSON.parse(await f.text());
+    this.fileHandle = h;
+    this.fileName = h.name;
+    this.pendingHandle = null;
+    this.fileError = "";
+    await this.saveHandle(h);
+    return data;
+  },
+
+  async unlinkFile() {
+    this.fileHandle = null; this.fileName = "";
+    this.pendingHandle = null; this.pendingName = "";
+    await this.forgetHandle();
+  },
+
+  label() {
+    if (this.fileHandle) return this.fileName || "File on disk";
+    return this.mode === "idb" ? "Browser database" : "Browser storage";
+  }
+};
+
+/* ================================================================== state */
+const SCHEMA_VERSION = 1;
+
+function blankState() {
+  return {
+    version: SCHEMA_VERSION,
+    company: {
+      name: "", logo: "", addressLines: "", email: "", phone: "", web: "",
+      taxIdLabel: "TRN", taxId: "",
+      bank: { name: "", accountName: "", accountNumber: "", accountType: "", branch: "",
+              routing: "", swift: "", iban: "", instructions: "" }
+    },
+    settings: {
+      theme: "system", accent: "#1a7f5a", pageSize: "letter",
+      currency: "JMD", enabledCurrencies: ["JMD", "USD"],
+      taxEnabled: true, taxLabel: "GCT", taxRateBp: 1500, taxDefaultOn: true,
+      invoicePrefix: "INV-{YYYY}-{####}", invoiceNext: 1,
+      estimatePrefix: "EST-{YYYY}-{####}", estimateNext: 1,
+      paymentTermsDays: 30, estimateValidDays: 30,
+      defaultNotes: "", defaultTerms: "", footerText: "",
+      lastExport: null
+    },
+    clients: [],
+    docs: []
+  };
+}
+
+function migrate(s) {
+  if (!s || typeof s !== "object") return blankState();
+  const base = blankState();
+  const out = Object.assign({}, base, s);
+  out.company = Object.assign({}, base.company, s.company || {});
+  out.company.bank = Object.assign({}, base.company.bank, (s.company && s.company.bank) || {});
+  out.settings = Object.assign({}, base.settings, s.settings || {});
+  out.clients = Array.isArray(s.clients) ? s.clients : [];
+  out.docs = Array.isArray(s.docs) ? s.docs : [];
+  out.docs.forEach((d) => {
+    d.items = Array.isArray(d.items) ? d.items : [];
+    d.payments = Array.isArray(d.payments) ? d.payments : [];
+    d.discount = d.discount || { type: "none", value: 0 };
+    if (typeof d.taxRateBp !== "number") d.taxRateBp = 0;
+  });
+  out.version = SCHEMA_VERSION;
+  return out;
+}
+
+let S = blankState();
+let saveTimer = null;
+function persist(immediate) {
+  clearTimeout(saveTimer);
+  const go = () => Store.save(S);
+  if (immediate) return go();
+  saveTimer = setTimeout(go, 250);
+}
+
+/* ------------------------------------------------------------- selectors */
+const clientById = (id) => S.clients.find((c) => c.id === id) || null;
+const docById = (id) => S.docs.find((d) => d.id === id) || null;
+const clientName = (id) => { const c = clientById(id); return c ? c.name : "(deleted client)"; };
+
+function docStatus(doc) {
+  const t = computeDoc(doc);
+  if (doc.type === "estimate") {
+    if (doc.convertedToId && docById(doc.convertedToId)) return "converted";
+    if (doc.status === "declined") return "declined";
+    if (doc.status === "accepted") return "accepted";
+    if (doc.status === "draft") return "draft";
+    if (doc.dueDate && doc.dueDate < todayISO()) return "expired";
+    return "sent";
+  }
+  if (doc.status === "cancelled") return "cancelled";
+  if (doc.status === "draft") return "draft";
+  if (t.total > 0 && t.balance <= 0) return "paid";
+  if (t.paid > 0) return "partial";
+  if (doc.dueDate && doc.dueDate < todayISO()) return "overdue";
+  return "sent";
+}
+const STATUS_LABEL = {
+  draft: "Draft", sent: "Sent", partial: "Part paid", paid: "Paid", overdue: "Overdue",
+  cancelled: "Cancelled", accepted: "Accepted", declined: "Declined", expired: "Expired",
+  converted: "Converted"
+};
+const statusBadge = (doc) => {
+  const s = docStatus(doc);
+  return '<span class="badge ' + s + '">' + STATUS_LABEL[s] + "</span>";
+};
+
+/* =================================================================== icons */
+const IC = {
+  dash: '<path d="M3 12h7V3H3zM14 21h7v-9h-7zM14 8h7V3h-7zM3 21h7v-5H3z"/>',
+  people: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>',
+  doc: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/>',
+  quote: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/>',
+  cog: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.1-4.1"/>',
+  print: '<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/>',
+  back: '<path d="M19 12H5M12 19l-7-7 7-7"/>',
+  trash: '<path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>',
+  copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  arrow: '<path d="M5 12h14M12 5l7 7-7 7"/>',
+  cash: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>'
+};
+const svg = (p, size) => '<svg class="ic" width="' + (size || 16) + '" height="' + (size || 16) +
+  '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + p + "</svg>";
+
+/* =================================================================== modal */
+let modalOnClose = null;
+function openModal(title, bodyHTML, footHTML, opts) {
+  opts = opts || {};
+  $("#modal").className = "modal" + (opts.wide ? " wide" : "");
+  $("#modal").innerHTML =
+    '<div class="modal-head"><h3>' + esc(title) + '</h3>' +
+    '<button class="icon-btn" style="margin-left:auto" data-close aria-label="Close">' +
+    svg('<path d="M18 6L6 18M6 6l12 12"/>', 16) + "</button></div>" +
+    '<div class="modal-body">' + bodyHTML + "</div>" +
+    (footHTML ? '<div class="modal-foot">' + footHTML + "</div>" : "");
+  $("#modal-root").classList.add("open");
+  modalOnClose = opts.onClose || null;
+  const f = $("#modal [data-autofocus]");
+  if (f) setTimeout(() => f.focus(), 30);
+}
+function closeModal() {
+  $("#modal-root").classList.remove("open");
+  $("#modal").innerHTML = "";
+  if (modalOnClose) { const f = modalOnClose; modalOnClose = null; f(); }
+}
+document.addEventListener("click", (e) => {
+  if (e.target.closest("[data-close]")) closeModal();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && $("#modal-root").classList.contains("open")) closeModal();
+});
+
+function confirmDlg(title, msg, confirmLabel, onYes, danger) {
+  openModal(title, '<p style="margin:0;color:var(--text-2);line-height:1.55">' + msg + "</p>",
+    '<button class="btn" data-close>Cancel</button>' +
+    '<button class="btn ' + (danger ? "danger" : "primary") + '" id="cfmYes">' +
+    esc(confirmLabel) + "</button>");
+  $("#cfmYes").onclick = () => { closeModal(); onYes(); };
+}
+
+/* ================================================================== router */
+let route = { name: "dashboard", params: {} };
+
+function parseHash() {
+  const h = (location.hash || "#/dashboard").replace(/^#\/?/, "");
+  const p = h.split("/").filter(Boolean);
+  if (!p.length) return { name: "dashboard", params: {} };
+  if (p[0] === "clients" && p[1]) return { name: "client", params: { id: p[1] } };
+  if (p[0] === "invoices") return { name: "invoices", params: {} };
+  if (p[0] === "estimates") return { name: "estimates", params: {} };
+  if (p[0] === "clients") return { name: "clients", params: {} };
+  if (p[0] === "settings") return { name: "settings", params: {} };
+  if (p[0] === "new" && (p[1] === "invoice" || p[1] === "estimate"))
+    return { name: "edit", params: { id: "new", type: p[1], clientId: p[2] || "" } };
+  if (p[0] === "doc" && p[1] && p[2] === "edit") return { name: "edit", params: { id: p[1] } };
+  if (p[0] === "doc" && p[1]) return { name: "view", params: { id: p[1] } };
+  return { name: "dashboard", params: {} };
+}
+const go = (h) => { location.hash = h; };
+
+window.addEventListener("hashchange", () => { route = parseHash(); render(); });
+
+/* =================================================================== chrome */
+function renderNav() {
+  const openInv = S.docs.filter((d) => d.type === "invoice" &&
+    ["sent", "partial", "overdue"].includes(docStatus(d))).length;
+  const openEst = S.docs.filter((d) => d.type === "estimate" &&
+    ["sent", "accepted", "draft"].includes(docStatus(d))).length;
+  const items = [
+    { k: "dashboard", h: "#/dashboard", ic: IC.dash, l: "Dashboard" },
+    { k: "sep", l: "Documents" },
+    { k: "invoices", h: "#/invoices", ic: IC.doc, l: "Invoices", n: openInv },
+    { k: "estimates", h: "#/estimates", ic: IC.quote, l: "Estimates", n: openEst },
+    { k: "sep", l: "Records" },
+    { k: "clients", h: "#/clients", ic: IC.people, l: "Clients", n: S.clients.filter(c=>!c.archived).length },
+    { k: "settings", h: "#/settings", ic: IC.cog, l: "Settings" }
+  ];
+  const active = navActive();
+  $("#nav").innerHTML = items.map((it) => {
+    if (it.k === "sep") return '<div class="nav-label">' + esc(it.l) + "</div>";
+    return '<a class="nav-item' + (it.k === active ? " on" : "") + '" href="' + it.h + '">' +
+      svg(it.ic) + "<span>" + esc(it.l) + "</span>" +
+      (it.n ? '<span class="count">' + it.n + "</span>" : "") + "</a>";
+  }).join("");
+
+  const co = S.company.name || "PullScrew";
+  $("#brandName").textContent = co;
+  $("#brandName").title = co;
+  $("#brandMark").textContent = co.trim().split(/\s+/).slice(0, 2)
+    .map((w) => w[0]).join("").toUpperCase().slice(0, 2) || "PS";
+  const chip = $("#storageChip");
+  chip.innerHTML = "<b>" + esc(Store.label()) + "</b>" +
+    (S.settings.lastExport ? "Backed up " + esc(fmtDate(S.settings.lastExport)) : "No backup yet");
+}
+function navActive() {
+  if (route.name === "client") return "clients";
+  if (route.name === "edit" || route.name === "view") {
+    const d = route.params.id === "new"
+      ? { type: route.params.type } : docById(route.params.id);
+    return d && d.type === "estimate" ? "estimates" : "invoices";
+  }
+  return route.name;
+}
+
+function setHeader(title, sub, actions) {
+  $("#pageTitle").textContent = title;
+  $("#pageSub").textContent = sub || "";
+  $("#pageActions").innerHTML = actions || "";
+}
+
+/* =================================================================== views */
+function render() {
+  applyTheme();
+  renderNav();
+  const v = $("#view");
+  $("#pageStyle").textContent = "@page{size:" +
+    (S.settings.pageSize === "a4" ? "A4" : "letter") + " portrait;margin:0}";
+  switch (route.name) {
+    case "dashboard": viewDashboard(v); break;
+    case "invoices": viewDocs(v, "invoice"); break;
+    case "estimates": viewDocs(v, "estimate"); break;
+    case "clients": viewClients(v); break;
+    case "client": viewClient(v, route.params.id); break;
+    case "edit": viewEdit(v); break;
+    case "view": viewDoc(v, route.params.id); break;
+    case "settings": viewSettings(v); break;
+  }
+  // data-loss warning outranks whatever screen you are on
+  const warn = storageBanner();
+  if (warn) v.insertAdjacentHTML("afterbegin", warn);
+}
+
+function storageBanner() {
+  if (Store.available || Store.fileHandle) return "";
+  return '<div class="banner no-print" style="background:var(--danger-soft);' +
+    'border-color:color-mix(in srgb,var(--danger) 35%,transparent);color:var(--danger)">' +
+    "<span><b>Nothing is being saved.</b> This browser is blocking local storage, so your " +
+    "work will disappear when you close this tab. Export a backup before you close it, or " +
+    "open this file in Chrome or Firefox (and not in a private window).</span>" +
+    '<button class="btn sm" onclick="exportData()">Export now</button></div>';
+}
+
+function needsSetupBanner() {
+  if (S.company.name) return "";
+  return '<div class="banner no-print">' +
+    "<span>Add your business name, logo and bank details so they appear on documents.</span>" +
+    '<a class="btn sm" href="#/settings">Open settings</a></div>';
+}
+
+function backupBanner() {
+  const changed = S.docs.length + S.clients.length;
+  if (!changed) return "";
+  const last = S.settings.lastExport;
+  const stale = !last || daysBetween(last, todayISO()) > 14;
+  if (!stale) return "";
+  return '<div class="banner no-print">' +
+    "<span>" + (last ? "Last backup was " + fmtDate(last) + "." :
+      "You have no backup yet.") +
+    " Browser storage can be cleared — export a copy.</span>" +
+    '<button class="btn sm" onclick="exportData()">Export backup</button></div>';
+}
+
+/* -------------------------------------------------------------- dashboard */
+function viewDashboard(el) {
+  setHeader("Dashboard", S.company.name || "Set up your business in Settings",
+    '<a class="btn" href="#/new/estimate">' + svg(IC.plus, 15) + "New estimate</a>" +
+    '<a class="btn primary" href="#/new/invoice">' + svg(IC.plus, 15) + "New invoice</a>");
+
+  const invoices = S.docs.filter((d) => d.type === "invoice");
+  const byCur = {};
+  const ensure = (c) => (byCur[c] = byCur[c] || { out: 0, overdue: 0, paid30: 0, billed: 0 });
+  const today = todayISO(), cutoff = addDays(today, -30);
+
+  invoices.forEach((d) => {
+    const t = computeDoc(d), st = docStatus(d), b = ensure(d.currency);
+    if (st === "cancelled" || st === "draft") return;
+    b.billed += t.total;
+    if (t.balance > 0) b.out += t.balance;
+    if (st === "overdue") b.overdue += t.balance;
+    (d.payments || []).forEach((p) => {
+      if (p.date >= cutoff && p.date <= today) b.paid30 += p.amountCents || 0;
+    });
+  });
+
+  const curs = Object.keys(byCur).length ? Object.keys(byCur) : [S.settings.currency];
+  const money = (pick) => curs.map((c) =>
+    '<div>' + Money.fmt((byCur[c] || {})[pick] || 0, c) +
+    '<span style="font-size:11px;color:var(--muted);margin-left:5px">' + c + "</span></div>"
+  ).join("");
+
+  const overdueCount = invoices.filter((d) => docStatus(d) === "overdue").length;
+  const openEst = S.docs.filter((d) => d.type === "estimate" &&
+    ["sent", "accepted", "draft"].includes(docStatus(d)));
+  const estValue = {};
+  openEst.forEach((d) => {
+    estValue[d.currency] = (estValue[d.currency] || 0) + computeDoc(d).total;
+  });
+
+  const recent = S.docs.slice().sort((a, b) =>
+    (b.updatedAt || "").localeCompare(a.updatedAt || "")).slice(0, 8);
+
+  el.innerHTML = needsSetupBanner() + backupBanner() +
+    '<div class="stats">' +
+      '<div class="stat"><div class="k">Outstanding</div><div class="v ' +
+        (curs.length > 1 ? "sm" : "") + '">' + money("out") + "</div>" +
+        '<div class="m">' + invoices.filter((d) => computeDoc(d).balance > 0 &&
+          !["draft", "cancelled"].includes(docStatus(d))).length + " unpaid invoices</div></div>" +
+      '<div class="stat' + (overdueCount ? " alert" : "") + '"><div class="k">Overdue</div><div class="v ' +
+        (curs.length > 1 ? "sm" : "") + '">' + money("overdue") + "</div>" +
+        '<div class="m">' + overdueCount + " past due date</div></div>" +
+      '<div class="stat"><div class="k">Collected · 30 days</div><div class="v ' +
+        (curs.length > 1 ? "sm" : "") + '">' + money("paid30") + "</div>" +
+        '<div class="m">Payments received</div></div>' +
+      '<div class="stat"><div class="k">Open estimates</div><div class="v">' + openEst.length + "</div>" +
+        '<div class="m">' + (Object.keys(estValue).length
+          ? Object.keys(estValue).map((c) => Money.fmt(estValue[c], c)).join(" · ")
+          : "Nothing pending") + "</div></div>" +
+    "</div>" +
+    '<div class="card"><div class="card-head"><h3>Recent activity</h3>' +
+      '<div class="right"><a class="btn sm" href="#/invoices">All invoices</a>' +
+      '<a class="btn sm" href="#/estimates">All estimates</a></div></div>' +
+      (recent.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr>' +
+        "<th>Number</th><th>Type</th><th>Client</th><th>Date</th>" +
+        '<th class="r">Total</th><th>Status</th></tr></thead><tbody>' +
+        recent.map((d) => {
+          const t = computeDoc(d);
+          return '<tr class="clickable" onclick="go(\'#/doc/' + d.id + '\')">' +
+            '<td class="mono-num">' + esc(d.number) + "</td>" +
+            "<td>" + (d.type === "invoice" ? "Invoice" : "Estimate") + "</td>" +
+            "<td>" + esc(clientName(d.clientId)) + "</td>" +
+            "<td>" + fmtDate(d.issueDate) + "</td>" +
+            '<td class="r">' + Money.fmt(t.total, d.currency) + "</td>" +
+            "<td>" + statusBadge(d) + "</td></tr>";
+        }).join("") + "</tbody></table></div>"
+        : '<div class="empty"><h3>Nothing here yet</h3>' +
+          "<p>Create your first invoice or estimate to get going.</p>" +
+          '<a class="btn primary" href="#/new/invoice">New invoice</a></div>') +
+    "</div>";
+}
+
+/* ------------------------------------------------------------- doc lists */
+let listFilter = { invoice: "open", estimate: "open" };
+let listSearch = { invoice: "", estimate: "" };
+
+function viewDocs(el, type) {
+  const isInv = type === "invoice";
+  setHeader(isInv ? "Invoices" : "Estimates",
+    isInv ? "Bill clients and track what you're owed" : "Quote work before you do it",
+    '<a class="btn primary" href="#/new/' + type + '">' + svg(IC.plus, 15) +
+    (isInv ? "New invoice" : "New estimate") + "</a>");
+
+  const filters = isInv
+    ? [["open", "Open"], ["overdue", "Overdue"], ["paid", "Paid"], ["draft", "Drafts"], ["all", "All"]]
+    : [["open", "Open"], ["accepted", "Accepted"], ["converted", "Converted"], ["draft", "Drafts"], ["all", "All"]];
+
+  const f = listFilter[type], q = listSearch[type].toLowerCase();
+  let docs = S.docs.filter((d) => d.type === type);
+
+  docs = docs.filter((d) => {
+    const st = docStatus(d);
+    if (f === "all") return true;
+    if (f === "open") return isInv ? ["sent", "partial", "overdue"].includes(st)
+      : ["sent", "draft", "accepted"].includes(st);
+    if (f === "draft") return st === "draft";
+    return st === f;
+  });
+
+  if (q) docs = docs.filter((d) =>
+    (d.number || "").toLowerCase().includes(q) ||
+    (d.subject || "").toLowerCase().includes(q) ||
+    clientName(d.clientId).toLowerCase().includes(q));
+
+  docs.sort((a, b) => (b.issueDate || "").localeCompare(a.issueDate || "") ||
+    (b.number || "").localeCompare(a.number || ""));
+
+  const totals = {};
+  docs.forEach((d) => {
+    const t = computeDoc(d), st = docStatus(d);
+    totals[d.currency] = totals[d.currency] || { total: 0, bal: 0 };
+    totals[d.currency].total += t.total;
+    // drafts and voided invoices aren't owed yet — match the dashboard
+    if (!["draft", "cancelled"].includes(st)) totals[d.currency].bal += Math.max(0, t.balance);
+  });
+  const multiCur = Object.keys(totals).length > 1;
+
+  el.innerHTML =
+    '<div class="toolbar">' +
+      '<div class="seg">' + filters.map(([k, l]) =>
+        '<button class="' + (f === k ? "on" : "") + '" onclick="setFilter(\'' + type + "','" + k + "')\">" +
+        l + "</button>").join("") + "</div>" +
+      '<div class="search">' + svg(IC.search, 15) +
+        '<input class="inp" placeholder="Search number, client, subject…" value="' +
+        attr(listSearch[type]) + '" oninput="setSearch(\'' + type + "',this.value)\"></div>" +
+    "</div>" +
+    '<div class="card">' +
+    (docs.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr>' +
+      "<th>Number</th><th>Client</th><th>Issued</th><th>" +
+      (isInv ? "Due" : "Valid until") + '</th><th class="r">Total</th>' +
+      (isInv ? '<th class="r">Balance</th>' : "") +
+      '<th>Status</th><th class="acts"></th></tr></thead><tbody>' +
+      docs.map((d) => {
+        const t = computeDoc(d), st = docStatus(d);
+        const overdue = st === "overdue";
+        const owed = t.balance > 0 && !["draft", "cancelled"].includes(st);
+        return '<tr>' +
+          '<td class="mono-num clickable" onclick="go(\'#/doc/' + d.id + '\')">' +
+            esc(d.number) + (d.subject ? '<div style="font-weight:400;font-size:12px;color:var(--muted)">' +
+            esc(d.subject) + "</div>" : "") + "</td>" +
+          '<td class="clickable" onclick="go(\'#/doc/' + d.id + '\')">' + esc(clientName(d.clientId)) + "</td>" +
+          "<td>" + fmtDate(d.issueDate) + "</td>" +
+          "<td" + (overdue ? ' style="color:var(--danger);font-weight:600"' : "") + ">" +
+            fmtDate(d.dueDate) + "</td>" +
+          '<td class="r">' + Money.fmt(t.total, d.currency) + "</td>" +
+          (isInv ? '<td class="r"' + (owed ? ' style="font-weight:600"' : "") + ">" +
+            (owed ? Money.fmt(t.balance, d.currency) : "—") + "</td>" : "") +
+          "<td>" + statusBadge(d) + "</td>" +
+          '<td class="acts">' +
+            (isInv && t.balance > 0 && st !== "draft" && st !== "cancelled"
+              ? '<button class="btn sm" onclick="payDlg(\'' + d.id + '\')">Record payment</button>' : "") +
+            (!isInv && !d.convertedToId
+              ? '<button class="btn sm" onclick="convertDlg(\'' + d.id + '\')">To invoice</button>' : "") +
+            '<a class="btn sm" href="#/doc/' + d.id + '/edit">Edit</a>' +
+          "</td></tr>";
+      }).join("") + "</tbody></table></div>" +
+      '<div class="card-pad" style="border-top:1px solid var(--border);display:flex;gap:26px;' +
+        'font-size:13px;color:var(--muted);flex-wrap:wrap">' +
+        "<span>" + docs.length + " document" + (docs.length === 1 ? "" : "s") + "</span>" +
+        Object.keys(totals).sort().map((c) =>
+          "<span>" + (multiCur ? "<b>" + c + "</b> · " : "") +
+          'Total <b class="num" style="color:var(--text)">' + Money.fmt(totals[c].total, c) + "</b>" +
+          (isInv && totals[c].bal > 0
+            ? ' · Outstanding <b class="num" style="color:var(--text)">' +
+              Money.fmt(totals[c].bal, c) + "</b>" : "") + "</span>").join("") +
+      "</div>"
+      : '<div class="empty"><h3>No ' + (isInv ? "invoices" : "estimates") +
+        (f === "all" ? "" : " in this view") + "</h3>" +
+        "<p>" + (f === "all"
+          ? (isInv ? "Invoices you create will show up here."
+                   : "Estimates let you quote a price, then convert the accepted ones into invoices.")
+          : "Try a different filter.") + "</p>" +
+        '<a class="btn primary" href="#/new/' + type + '">New ' + type + "</a></div>") +
+    "</div>";
+}
+function setFilter(type, k) { listFilter[type] = k; render(); }
+function setSearch(type, v) {
+  listSearch[type] = v;
+  const sel = document.activeElement, pos = sel && sel.selectionStart;
+  render();
+  const inp = $(".search .inp");
+  if (inp) { inp.focus(); try { inp.setSelectionRange(pos, pos); } catch (e) {} }
+}
+
+/* --------------------------------------------------------------- clients */
+let clientSearch = "";
+function viewClients(el) {
+  setHeader("Clients", "Everyone you bill",
+    '<button class="btn primary" onclick="clientDlg()">' + svg(IC.plus, 15) + "New client</button>");
+
+  const q = clientSearch.toLowerCase();
+  let list = S.clients.filter((c) => !c.archived);
+  if (q) list = list.filter((c) =>
+    (c.name || "").toLowerCase().includes(q) ||
+    (c.email || "").toLowerCase().includes(q) ||
+    (c.contactName || "").toLowerCase().includes(q));
+  list.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+  el.innerHTML =
+    '<div class="toolbar"><div class="search">' + svg(IC.search, 15) +
+    '<input class="inp" placeholder="Search clients…" value="' + attr(clientSearch) +
+    '" oninput="clientSearch=this.value;renderKeepFocus()"></div></div>' +
+    '<div class="card">' +
+    (list.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr>' +
+      "<th>Client</th><th>Contact</th><th>Email</th>" +
+      '<th class="r">Invoices</th><th class="r">Outstanding</th><th class="acts"></th>' +
+      "</tr></thead><tbody>" +
+      list.map((c) => {
+        const docs = S.docs.filter((d) => d.clientId === c.id && d.type === "invoice");
+        const bal = {};
+        docs.forEach((d) => {
+          const st = docStatus(d);
+          if (st === "draft" || st === "cancelled") return;
+          const t = computeDoc(d);
+          if (t.balance > 0) bal[d.currency] = (bal[d.currency] || 0) + t.balance;
+        });
+        const balStr = Object.keys(bal).map((k) => Money.fmt(bal[k], k)).join(" · ");
+        return '<tr class="clickable" onclick="go(\'#/clients/' + c.id + '\')">' +
+          "<td><b>" + esc(c.name) + "</b>" +
+            (c.taxId ? '<div style="font-size:12px;color:var(--muted)">' +
+              esc(S.company.taxIdLabel || "TRN") + " " + esc(c.taxId) + "</div>" : "") + "</td>" +
+          "<td>" + esc(c.contactName || "—") + "</td>" +
+          "<td>" + esc(c.email || "—") + "</td>" +
+          '<td class="r">' + docs.length + "</td>" +
+          '<td class="r"' + (balStr ? ' style="font-weight:600"' : "") + ">" +
+            (balStr || "—") + "</td>" +
+          '<td class="acts"><a class="btn sm" href="#/new/invoice/' + c.id +
+            '" onclick="event.stopPropagation()">Invoice</a></td></tr>';
+      }).join("") + "</tbody></table></div>"
+      : '<div class="empty"><h3>No clients yet</h3>' +
+        "<p>Add a client once, then reuse their details on every invoice and estimate.</p>" +
+        '<button class="btn primary" onclick="clientDlg()">Add your first client</button></div>') +
+    "</div>";
+}
+function renderKeepFocus() {
+  const pos = document.activeElement && document.activeElement.selectionStart;
+  render();
+  const inp = $(".search .inp");
+  if (inp) { inp.focus(); try { inp.setSelectionRange(pos, pos); } catch (e) {} }
+}
+
+function clientDlg(id) {
+  const c = id ? clientById(id) : null;
+  const v = (k) => attr(c ? c[k] || "" : "");
+  openModal(c ? "Edit client" : "New client",
+    '<label class="f"><span>Client / business name *</span>' +
+      '<input class="inp" id="cName" data-autofocus value="' + v("name") + '"></label>' +
+    '<div class="grid2">' +
+      '<label class="f"><span>Contact person</span><input class="inp" id="cContact" value="' +
+        v("contactName") + '"></label>' +
+      '<label class="f"><span>' + esc(S.company.taxIdLabel || "TRN") +
+        '</span><input class="inp" id="cTax" value="' + v("taxId") + '"></label>' +
+    "</div>" +
+    '<div class="grid2">' +
+      '<label class="f"><span>Email</span><input class="inp" id="cEmail" type="email" value="' +
+        v("email") + '"></label>' +
+      '<label class="f"><span>Phone</span><input class="inp" id="cPhone" value="' +
+        v("phone") + '"></label>' +
+    "</div>" +
+    '<label class="f"><span>Address <span class="hint">— one line per line</span></span>' +
+      '<textarea class="inp" id="cAddr" rows="3" placeholder="12 Hope Road&#10;Kingston 6&#10;Jamaica">' +
+      esc(c ? c.addressLines || "" : "") + "</textarea></label>" +
+    '<label class="f"><span>Internal notes <span class="hint">— never printed</span></span>' +
+      '<textarea class="inp" id="cNotes" rows="2">' + esc(c ? c.notes || "" : "") + "</textarea></label>",
+    (c ? '<button class="btn danger" id="cDel" style="margin-right:auto">Delete</button>' : "") +
+    '<button class="btn" data-close>Cancel</button>' +
+    '<button class="btn primary" id="cSave">' + (c ? "Save changes" : "Add client") + "</button>");
+
+  $("#cSave").onclick = () => {
+    const name = $("#cName").value.trim();
+    if (!name) { toast("Client needs a name.", "err"); $("#cName").focus(); return; }
+    const data = {
+      name, contactName: $("#cContact").value.trim(), taxId: $("#cTax").value.trim(),
+      email: $("#cEmail").value.trim(), phone: $("#cPhone").value.trim(),
+      addressLines: $("#cAddr").value.trim(), notes: $("#cNotes").value.trim()
+    };
+    if (c) Object.assign(c, data);
+    else S.clients.push(Object.assign({ id: uid(), archived: false }, data));
+    persist(); closeModal(); render();
+    toast(c ? "Client updated" : "Client added");
+  };
+  if (c) $("#cDel").onclick = () => {
+    const used = S.docs.filter((d) => d.clientId === c.id).length;
+    closeModal();
+    confirmDlg("Delete client?",
+      used ? "<b>" + esc(c.name) + "</b> is on " + used + " document" + (used === 1 ? "" : "s") +
+        ". Deleting will leave those documents without a client. Archive instead to keep them intact."
+        : "Delete <b>" + esc(c.name) + "</b>? This cannot be undone.",
+      used ? "Delete anyway" : "Delete", () => {
+        S.clients = S.clients.filter((x) => x.id !== c.id);
+        persist(); go("#/clients"); render(); toast("Client deleted");
+      }, true);
+  };
+}
+
+function viewClient(el, id) {
+  const c = clientById(id);
+  if (!c) { el.innerHTML = '<div class="empty"><h3>Client not found</h3></div>';
+    setHeader("Client", "", ""); return; }
+
+  const docs = S.docs.filter((d) => d.clientId === c.id)
+    .sort((a, b) => (b.issueDate || "").localeCompare(a.issueDate || ""));
+  const bal = {}, billed = {};
+  docs.forEach((d) => {
+    if (d.type !== "invoice") return;
+    const st = docStatus(d); if (st === "draft" || st === "cancelled") return;
+    const t = computeDoc(d);
+    billed[d.currency] = (billed[d.currency] || 0) + t.total;
+    if (t.balance > 0) bal[d.currency] = (bal[d.currency] || 0) + t.balance;
+  });
+
+  setHeader(c.name, [c.contactName, c.email, c.phone].filter(Boolean).join(" · "),
+    '<a class="btn" href="#/clients">' + svg(IC.back, 15) + "All clients</a>" +
+    '<button class="btn" onclick="clientDlg(\'' + c.id + '\')">Edit</button>' +
+    '<a class="btn" href="#/new/estimate/' + c.id + '">New estimate</a>' +
+    '<a class="btn primary" href="#/new/invoice/' + c.id + '">New invoice</a>');
+
+  const fmtMap = (m, fallback) => Object.keys(m).length
+    ? Object.keys(m).map((k) => Money.fmt(m[k], k)).join(" · ") : fallback;
+
+  el.innerHTML =
+    '<div class="stats">' +
+      '<div class="stat"><div class="k">Outstanding</div><div class="v sm">' +
+        fmtMap(bal, Money.fmt(0, S.settings.currency)) + "</div></div>" +
+      '<div class="stat"><div class="k">Billed all time</div><div class="v sm">' +
+        fmtMap(billed, Money.fmt(0, S.settings.currency)) + "</div></div>" +
+      '<div class="stat"><div class="k">Documents</div><div class="v">' + docs.length + "</div>" +
+        '<div class="m">' + docs.filter((d) => d.type === "invoice").length + " invoices · " +
+        docs.filter((d) => d.type === "estimate").length + " estimates</div></div>" +
+    "</div>" +
+    '<div class="card" style="margin-bottom:16px"><div class="card-head"><h3>Details</h3></div>' +
+      '<div class="card-pad" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;font-size:13px">' +
+        detailBlock("Address", c.addressLines) +
+        detailBlock("Email", c.email) + detailBlock("Phone", c.phone) +
+        detailBlock(S.company.taxIdLabel || "TRN", c.taxId) +
+        (c.notes ? detailBlock("Notes", c.notes) : "") +
+      "</div></div>" +
+    '<div class="card"><div class="card-head"><h3>Documents</h3></div>' +
+    (docs.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr>' +
+      "<th>Number</th><th>Type</th><th>Issued</th><th>Due</th>" +
+      '<th class="r">Total</th><th class="r">Balance</th><th>Status</th></tr></thead><tbody>' +
+      docs.map((d) => {
+        const t = computeDoc(d), st = docStatus(d);
+        const owed = d.type === "invoice" && t.balance > 0 &&
+          !["draft", "cancelled"].includes(st);
+        return '<tr class="clickable" onclick="go(\'#/doc/' + d.id + '\')">' +
+          '<td class="mono-num">' + esc(d.number) + "</td>" +
+          "<td>" + (d.type === "invoice" ? "Invoice" : "Estimate") + "</td>" +
+          "<td>" + fmtDate(d.issueDate) + "</td><td>" + fmtDate(d.dueDate) + "</td>" +
+          '<td class="r">' + Money.fmt(t.total, d.currency) + "</td>" +
+          '<td class="r">' + (owed ? Money.fmt(t.balance, d.currency) : "—") + "</td>" +
+          "<td>" + statusBadge(d) + "</td></tr>";
+      }).join("") + "</tbody></table></div>"
+      : '<div class="empty"><p>Nothing billed to ' + esc(c.name) + " yet.</p>" +
+        '<a class="btn primary" href="#/new/invoice/' + c.id + '">Create an invoice</a></div>') +
+    "</div>";
+}
+const detailBlock = (label, val) =>
+  '<div><div style="font-size:11px;font-weight:650;letter-spacing:.05em;text-transform:uppercase;' +
+  'color:var(--muted);margin-bottom:4px">' + esc(label) + "</div>" +
+  '<div style="white-space:pre-line;color:var(--text-2)">' + (esc(val) || "—") + "</div></div>";
+
+/* ==================================================================== editor */
+let draft = null;
+
+function newDoc(type, clientId) {
+  const st = S.settings;
+  const isInv = type === "invoice";
+  return {
+    id: uid(), type,
+    number: formatNumber(isInv ? st.invoicePrefix : st.estimatePrefix,
+      isInv ? st.invoiceNext : st.estimateNext),
+    numberLocked: false,
+    clientId: clientId || "",
+    subject: "",
+    issueDate: todayISO(),
+    dueDate: addDays(todayISO(), isInv ? st.paymentTermsDays : st.estimateValidDays),
+    currency: st.currency,
+    taxRateBp: st.taxEnabled ? st.taxRateBp : 0,
+    taxLabel: st.taxLabel,
+    items: [{ id: uid(), desc: "", qtyMilli: 1000, unitCents: 0, taxable: !!st.taxDefaultOn && !!st.taxEnabled }],
+    discount: { type: "none", value: 0 },
+    notes: st.defaultNotes || "",
+    terms: st.defaultTerms || "",
+    status: "draft",
+    payments: [],
+    convertedToId: null, convertedFromId: null,
+    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+  };
+}
+
+function viewEdit(el) {
+  const isNew = route.params.id === "new";
+  if (!draft || (isNew ? draft.__new !== true : draft.id !== route.params.id)) {
+    if (isNew) {
+      draft = newDoc(route.params.type, route.params.clientId);
+      draft.__new = true;
+    } else {
+      const d = docById(route.params.id);
+      if (!d) { el.innerHTML = '<div class="empty"><h3>Document not found</h3></div>';
+        setHeader("Document", "", ""); return; }
+      draft = JSON.parse(JSON.stringify(d));
+      delete draft.__new;
+    }
+  }
+  const isInv = draft.type === "invoice";
+  const t = computeDoc(draft);
+
+  setHeader((isNew ? "New " : "Edit ") + (isInv ? "invoice" : "estimate"),
+    draft.number + (draft.clientId ? " · " + clientName(draft.clientId) : ""),
+    '<button class="btn" onclick="cancelEdit()">Cancel</button>' +
+    (isNew ? "" : '<button class="btn danger" onclick="deleteDoc(\'' + draft.id + '\')">' +
+      svg(IC.trash, 15) + "Delete</button>") +
+    '<button class="btn primary" onclick="saveDraft(true)">Save' +
+    (isNew ? "" : " changes") + "</button>");
+
+  const clientOpts = S.clients.filter((c) => !c.archived)
+    .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+    .map((c) => '<option value="' + attr(c.id) + '"' +
+      (c.id === draft.clientId ? " selected" : "") + ">" + esc(c.name) + "</option>").join("");
+
+  const curOpts = (S.settings.enabledCurrencies || ["JMD"]).map((c) =>
+    '<option value="' + c + '"' + (c === draft.currency ? " selected" : "") + ">" +
+    c + " · " + esc((CURRENCIES[c] || {}).symbol || "") + "</option>").join("");
+
+  el.innerHTML =
+    '<div class="editor-grid">' +
+      '<div>' +
+        '<div class="card" style="margin-bottom:16px"><div class="card-pad">' +
+          '<div class="grid2">' +
+            '<label class="f"><span>Client *</span><select class="inp" id="dClient" ' +
+              'onchange="draft.clientId=this.value;renderSoft()">' +
+              '<option value="">— select a client —</option>' + clientOpts + "</select>" +
+              '<button class="btn sm ghost" style="margin-top:6px;padding-left:0" ' +
+              'onclick="quickClient()">+ Add a new client</button></label>' +
+            '<label class="f"><span>' + (isInv ? "Invoice" : "Estimate") + ' number</span>' +
+              '<input class="inp" id="dNumber" value="' + attr(draft.number) +
+              '" oninput="draft.number=this.value;draft.numberLocked=true"></label>' +
+          "</div>" +
+          '<label class="f"><span>Subject <span class="hint">— what this is for</span></span>' +
+            '<input class="inp" value="' + attr(draft.subject) +
+            '" placeholder="Website redesign — phase 2" oninput="draft.subject=this.value"></label>' +
+          '<div class="grid3">' +
+            '<label class="f"><span>Issue date</span><input class="inp" type="date" value="' +
+              attr(draft.issueDate) + '" onchange="setIssueDate(this.value)"></label>' +
+            '<label class="f"><span>' + (isInv ? "Due date" : "Valid until") + "</span>" +
+              '<input class="inp" type="date" value="' + attr(draft.dueDate) +
+              '" onchange="draft.dueDate=this.value;renderSoft()"></label>' +
+            '<label class="f"><span>Currency</span><select class="inp" ' +
+              'onchange="draft.currency=this.value;renderSoft()">' + curOpts + "</select></label>" +
+          "</div>" +
+        "</div></div>" +
+
+        '<div class="card" style="margin-bottom:16px">' +
+          '<div class="card-head"><h3>Line items</h3><div class="right">' +
+            '<button class="btn sm" onclick="addItem()">' + svg(IC.plus, 13) + "Add line</button>" +
+          "</div></div>" +
+          '<div class="card-pad">' + itemsTable(draft, t) + "</div>" +
+          '<div class="card-pad" style="border-top:1px solid var(--border);display:flex;' +
+            'gap:18px;align-items:flex-start;flex-wrap:wrap">' + discountControls(draft) +
+            '<div class="totals" id="dTotals">' + totalsBlock(draft, t, true) + "</div>" +
+          "</div>" +
+        "</div>" +
+
+        '<div class="card"><div class="card-pad">' +
+          '<div class="grid2">' +
+            '<label class="f"><span>Notes <span class="hint">— shown on the document</span></span>' +
+              '<textarea class="inp" id="dNotes" rows="4" ' +
+              'placeholder="Thank you for your business.">' + esc(draft.notes) + "</textarea></label>" +
+            '<label class="f"><span>Terms</span><textarea class="inp" id="dTerms" rows="4" ' +
+              'placeholder="Payment due within 30 days.">' + esc(draft.terms) + "</textarea></label>" +
+          "</div>" +
+        "</div></div>" +
+      "</div>" +
+
+      '<div>' + editorSidebar(draft, t, isInv) + "</div>" +
+    "</div>";
+
+  // bound directly so typing never triggers a re-render
+  $("#dNotes").oninput = (e) => { draft.notes = e.target.value; };
+  $("#dTerms").oninput = (e) => { draft.terms = e.target.value; };
+  $$("#itemRows textarea").forEach(autoGrow);
+}
+
+function itemsTable(d, t) {
+  const taxOn = d.taxRateBp > 0;
+  return '<div class="tbl-wrap"><table class="items-tbl"><thead><tr>' +
+    '<th style="width:20px"></th><th>Description</th>' +
+    '<th class="r" style="width:80px">Qty</th>' +
+    '<th class="r" style="width:120px">Unit price</th>' +
+    (taxOn ? '<th style="width:64px;text-align:center">' + esc(d.taxLabel || "Tax") + "</th>" : "") +
+    '<th class="r" style="width:120px">Amount</th><th style="width:30px"></th>' +
+    "</tr></thead><tbody id="+'"itemRows"'+">" +
+    d.items.map((it, i) =>
+      '<tr data-i="' + i + '">' +
+      '<td class="drag" title="Drag to reorder" draggable="true">⠿</td>' +
+      '<td><textarea class="inp" rows="1" placeholder="What are you billing for?" ' +
+        'oninput="upItem(' + i + ',\'desc\',this.value);autoGrow(this)" ' +
+        'style="min-height:36px;overflow:hidden">' + esc(it.desc) + "</textarea></td>" +
+      '<td><input class="inp num" value="' + attr(Qty.fmt(it.qtyMilli)) +
+        '" inputmode="decimal" onchange="upItem(' + i + ',\'qty\',this.value)"></td>' +
+      '<td><input class="inp money" value="' + attr(Money.raw(it.unitCents)) +
+        '" inputmode="decimal" onchange="upItem(' + i + ',\'unit\',this.value)"></td>' +
+      (taxOn ? '<td style="text-align:center;padding-top:12px">' +
+        '<input type="checkbox" style="width:15px;height:15px;accent-color:var(--accent)" ' +
+        (it.taxable ? "checked" : "") + ' onchange="upItem(' + i + ',\'taxable\',this.checked)"></td>' : "") +
+      '<td class="r amtCell" style="padding-top:14px;font-variant-numeric:tabular-nums;font-weight:550">' +
+        Money.fmt(t.lines[i], d.currency) + "</td>" +
+      '<td style="padding-top:9px"><button class="icon-btn" title="Remove line" ' +
+        'onclick="rmItem(' + i + ')" style="width:26px;height:26px">' + svg(IC.trash, 14) + "</button></td>" +
+      "</tr>").join("") + "</tbody></table></div>";
+}
+
+function discountControls(d) {
+  const dt = (d.discount && d.discount.type) || "none";
+  return '<div style="min-width:190px">' +
+    '<label class="f" style="margin-bottom:8px"><span>Discount</span>' +
+    '<select class="inp" onchange="setDiscountType(this.value)">' +
+      '<option value="none"' + (dt === "none" ? " selected" : "") + ">None</option>" +
+      '<option value="pct"' + (dt === "pct" ? " selected" : "") + ">Percentage</option>" +
+      '<option value="amt"' + (dt === "amt" ? " selected" : "") + ">Fixed amount</option>" +
+    "</select></label>" +
+    (dt === "pct" ? '<input class="inp num" inputmode="decimal" value="' +
+      attr((d.discount.value / 100).toFixed(2).replace(/\.00$/, "")) +
+      '" onchange="setDiscountValue(this.value)" placeholder="10"> ' +
+      '<div style="font-size:11px;color:var(--muted);margin-top:4px">percent off subtotal</div>' : "") +
+    (dt === "amt" ? '<input class="inp money" inputmode="decimal" value="' +
+      attr(Money.raw(d.discount.value)) + '" onchange="setDiscountValue(this.value)">' +
+      '<div style="font-size:11px;color:var(--muted);margin-top:4px">' +
+      esc(d.currency) + " off the total</div>" : "") +
+    "</div>";
+}
+
+function totalsBlock(d, t, editable) {
+  const rows = ['<div class="l"><span>Subtotal</span><span class="v">' +
+    Money.fmt(t.subtotal, d.currency) + "</span></div>"];
+  if (t.discount > 0) rows.push('<div class="l"><span>Discount' +
+    (d.discount.type === "pct" ? " (" + (d.discount.value / 100) + "%)" : "") +
+    '</span><span class="v">−' + Money.fmt(t.discount, d.currency) + "</span></div>");
+  if (d.taxRateBp > 0) rows.push('<div class="l"><span>' + esc(d.taxLabel || "Tax") +
+    " " + (d.taxRateBp / 100) + '%</span><span class="v">' +
+    Money.fmt(t.tax, d.currency) + "</span></div>");
+  rows.push('<div class="l total"><span>Total</span><span class="v">' +
+    Money.fmt(t.total, d.currency) + "</span></div>");
+  if (t.paid > 0) {
+    rows.push('<div class="l"><span>Paid</span><span class="v">−' +
+      Money.fmt(t.paid, d.currency) + "</span></div>");
+    rows.push('<div class="l ' + (t.balance > 0 ? "bal" : "") + '"><span>Balance due</span>' +
+      '<span class="v">' + Money.fmt(t.balance, d.currency) + "</span></div>");
+  }
+  return rows.join("");
+}
+
+function editorSidebar(d, t, isInv) {
+  const taxOn = d.taxRateBp > 0;
+  return '<div class="card" style="margin-bottom:16px"><div class="card-head"><h3>' +
+      esc(d.taxLabel || "Tax") + "</h3></div><div class=" + '"card-pad"' + ">" +
+      '<label class="chk" style="margin-bottom:12px"><input type="checkbox" ' +
+        (taxOn ? "checked" : "") + ' onchange="toggleTax(this.checked)">' +
+        "<span>Charge " + esc(d.taxLabel || "tax") + " on this document</span></label>" +
+      (taxOn ? '<div class="grid2">' +
+        '<label class="f" style="margin-bottom:0"><span>Label</span>' +
+          '<input class="inp" value="' + attr(d.taxLabel) +
+          '" onchange="draft.taxLabel=this.value;renderSoft()"></label>' +
+        '<label class="f" style="margin-bottom:0"><span>Rate %</span>' +
+          '<input class="inp num" inputmode="decimal" value="' + attr(d.taxRateBp / 100) +
+          '" onchange="setTaxRate(this.value)"></label></div>' +
+        '<div style="font-size:11.5px;color:var(--muted);margin-top:9px;line-height:1.45">' +
+        "Applies to ticked lines only, after any discount.</div>" : "") +
+    "</div></div>" +
+
+    (isInv ? '<div class="card" style="margin-bottom:16px">' +
+      '<div class="card-head"><h3>Payments</h3><div class="right">' +
+      (d.__new ? "" : '<button class="btn sm" onclick="payDlg(\'' + d.id +
+        '\',true)">Record</button>') + "</div></div>" +
+      '<div class="card-pad" style="padding-top:12px">' +
+        (d.payments && d.payments.length
+          ? d.payments.map((p, i) =>
+            '<div class="row" style="padding:6px 0;border-bottom:1px solid var(--border);font-size:13px">' +
+            "<div><b class=" + '"num"' + ">" + Money.fmt(p.amountCents, d.currency) + "</b>" +
+            '<div style="font-size:11.5px;color:var(--muted)">' + fmtDate(p.date) +
+            (p.method ? " · " + esc(p.method) : "") + "</div></div>" +
+            '<div class="spacer"></div>' +
+            '<button class="icon-btn" onclick="rmPayment(' + i + ')" title="Remove">' +
+            svg(IC.trash, 14) + "</button></div>").join("") +
+            '<div class="row" style="padding-top:10px;font-size:13px">' +
+            "<span>Balance due</span><div class=" + '"spacer"' + "></div>" +
+            '<b class="num" style="' + (t.balance > 0 ? "color:var(--danger)" : "") + '">' +
+            Money.fmt(t.balance, d.currency) + "</b></div>"
+          : '<div style="font-size:12.5px;color:var(--muted);line-height:1.5">' +
+            (d.__new ? "Save the invoice first, then record payments against it."
+              : "Nothing paid yet.") + "</div>") +
+      "</div></div>" : "") +
+
+    '<div class="card"><div class="card-head"><h3>Status</h3></div><div class="card-pad">' +
+      '<label class="f" style="margin-bottom:0"><span>Mark as</span>' +
+      '<select class="inp" id="dStatus" onchange="draft.status=this.value;renderSoft()">' +
+      (isInv
+        ? ['<option value="draft">Draft — not sent</option>',
+           '<option value="sent">Sent — awaiting payment</option>',
+           '<option value="cancelled">Cancelled / voided</option>'].join("")
+        : ['<option value="draft">Draft — not sent</option>',
+           '<option value="sent">Sent — awaiting reply</option>',
+           '<option value="accepted">Accepted</option>',
+           '<option value="declined">Declined</option>'].join("")) +
+      "</select></label>" +
+      '<div style="font-size:11.5px;color:var(--muted);margin-top:9px;line-height:1.45">' +
+      (isInv ? "Paid, part-paid and overdue are worked out from payments and the due date."
+             : "Converted is set automatically when you turn this into an invoice.") +
+      "</div></div></div>";
+}
+
+// keep select values in sync after re-render
+function renderSoft() { render(); syncSelects(); }
+function syncSelects() {
+  if (!draft) return;
+  const c = $("#dClient"); if (c) c.value = draft.clientId;
+  const s = $("#dStatus"); if (s) s.value = draft.status;
+}
+
+function setIssueDate(v) {
+  const wasDefault = draft.dueDate === addDays(draft.issueDate,
+    draft.type === "invoice" ? S.settings.paymentTermsDays : S.settings.estimateValidDays);
+  draft.issueDate = v;
+  if (wasDefault) draft.dueDate = addDays(v,
+    draft.type === "invoice" ? S.settings.paymentTermsDays : S.settings.estimateValidDays);
+  renderSoft();
+}
+function autoGrow(ta) { ta.style.height = "auto"; ta.style.height = ta.scrollHeight + "px"; }
+function addItem() {
+  draft.items.push({ id: uid(), desc: "", qtyMilli: 1000, unitCents: 0,
+    taxable: draft.taxRateBp > 0 && !!S.settings.taxDefaultOn });
+  renderSoft();
+  const rows = $$("#itemRows tr");
+  const last = rows[rows.length - 1];
+  if (last) $("textarea", last).focus();
+}
+function rmItem(i) {
+  draft.items.splice(i, 1);
+  if (!draft.items.length) draft.items.push({ id: uid(), desc: "", qtyMilli: 1000,
+    unitCents: 0, taxable: draft.taxRateBp > 0 });
+  renderSoft();
+}
+/* Recompute the amount cells and the totals block in place. A full re-render
+   here would tear the row out from under whichever input you tabbed into. */
+function patchAmounts() {
+  if (!draft) return;
+  const t = computeDoc(draft);
+  $$("#itemRows .amtCell").forEach((cell, i) => {
+    cell.textContent = Money.fmt(t.lines[i] || 0, draft.currency);
+  });
+  const tot = $("#dTotals");
+  if (tot) tot.innerHTML = totalsBlock(draft, t, true);
+  const sub = $("#pageSub");
+  if (sub) sub.textContent = draft.number + (draft.clientId ? " · " + clientName(draft.clientId) : "");
+}
+function upItem(i, field, val) {
+  const it = draft.items[i]; if (!it) return;
+  if (field === "desc") { it.desc = val; return; }   // description can't change any total
+  if (field === "qty") it.qtyMilli = Qty.parse(val);
+  if (field === "unit") it.unitCents = Money.parse(val);
+  if (field === "taxable") it.taxable = !!val;
+  patchAmounts();
+}
+function setDiscountType(t) {
+  draft.discount = { type: t, value: t === "none" ? 0 : (draft.discount.value || 0) };
+  renderSoft();   // the discount input itself changes shape, so redraw
+}
+function setDiscountValue(v) {
+  if (draft.discount.type === "pct") {
+    const n = parseFloat(String(v).replace(/[^0-9.]/g, "")) || 0;
+    draft.discount.value = Math.round(clamp(n, 0, 100) * 100);
+  } else {
+    draft.discount.value = Math.max(0, Money.parse(v));
+  }
+  patchAmounts();
+}
+function toggleTax(on) {
+  draft.taxRateBp = on ? (S.settings.taxRateBp || 1500) : 0;
+  if (on) {
+    draft.taxLabel = draft.taxLabel || S.settings.taxLabel || "GCT";
+    draft.items.forEach((it) => { if (it.taxable === undefined) it.taxable = true; });
+    if (!draft.items.some((it) => it.taxable)) draft.items.forEach((it) => { it.taxable = true; });
+  }
+  renderSoft();
+}
+function setTaxRate(v) {
+  const n = parseFloat(String(v).replace(/[^0-9.]/g, "")) || 0;
+  const was = draft.taxRateBp;
+  draft.taxRateBp = Math.round(clamp(n, 0, 100) * 100);
+  // crossing zero adds or drops the per-line tax column, so redraw then
+  if ((was > 0) !== (draft.taxRateBp > 0)) renderSoft(); else patchAmounts();
+}
+function rmPayment(i) { draft.payments.splice(i, 1); renderSoft(); }
+
+function quickClient() {
+  clientDlg();
+  const orig = $("#cSave").onclick;
+  $("#cSave").onclick = () => {
+    const before = S.clients.length;
+    orig();
+    if (S.clients.length > before && draft) {
+      draft.clientId = S.clients[S.clients.length - 1].id;
+      renderSoft();
+    }
+  };
+}
+
+function cancelEdit() {
+  const d = draft;
+  draft = null;
+  if (d && d.__new) go(d.type === "invoice" ? "#/invoices" : "#/estimates");
+  else go("#/doc/" + (d ? d.id : ""));
+}
+
+function saveDraft(navigate) {
+  // Amount and qty fields commit on blur. Saving via Cmd+S while still inside
+  // one would otherwise drop that edit, so force the commit first.
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  if (!draft.clientId) { toast("Pick a client first.", "err"); return false; }
+  if (!draft.number.trim()) { toast("Give the document a number.", "err"); return false; }
+  const dup = S.docs.find((d) => d.id !== draft.id && d.type === draft.type &&
+    d.number.trim().toLowerCase() === draft.number.trim().toLowerCase());
+  if (dup) { toast("Number " + draft.number + " is already used.", "err"); return false; }
+
+  draft.items = draft.items.filter((it) =>
+    (it.desc || "").trim() || it.unitCents || (it.qtyMilli && it.qtyMilli !== 1000));
+  if (!draft.items.length) { toast("Add at least one line item.", "err");
+    draft.items.push({ id: uid(), desc: "", qtyMilli: 1000, unitCents: 0, taxable: false });
+    renderSoft(); return false; }
+
+  draft.updatedAt = new Date().toISOString();
+  const isNew = draft.__new === true;
+  delete draft.__new;
+
+  if (isNew) {
+    S.docs.push(draft);
+    if (draft.type === "invoice") S.settings.invoiceNext++;
+    else S.settings.estimateNext++;
+  } else {
+    const i = S.docs.findIndex((d) => d.id === draft.id);
+    if (i >= 0) S.docs[i] = draft; else S.docs.push(draft);
+  }
+  const id = draft.id;
+  persist(true);
+  toast(isNew ? "Saved" : "Changes saved");
+  draft = null;
+  if (navigate) go("#/doc/" + id);
+  return true;
+}
+
+function deleteDoc(id) {
+  const d = docById(id) || draft;
+  confirmDlg("Delete this " + (d.type || "document") + "?",
+    "<b>" + esc(d.number) + "</b> will be permanently removed. This cannot be undone.",
+    "Delete", () => {
+      S.docs = S.docs.filter((x) => x.id !== id);
+      S.docs.forEach((x) => { if (x.convertedToId === id) x.convertedToId = null; });
+      draft = null; persist(true);
+      go(d.type === "estimate" ? "#/estimates" : "#/invoices");
+      toast("Deleted");
+    }, true);
+}
+
+/* ------------------------------------------------------------- payments */
+function payDlg(docId, fromEditor) {
+  const d = fromEditor ? draft : docById(docId);
+  if (!d) return;
+  const t = computeDoc(d);
+  openModal("Record a payment",
+    '<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;' +
+      'padding:11px 14px;margin-bottom:16px;font-size:13px">' +
+      "<b>" + esc(d.number) + "</b> · " + esc(clientName(d.clientId)) +
+      '<div style="display:flex;justify-content:space-between;margin-top:6px;color:var(--text-2)">' +
+      "<span>Balance due</span><b class=" + '"num"' + ">" +
+      Money.fmt(t.balance, d.currency) + "</b></div></div>" +
+    '<div class="grid2">' +
+      '<label class="f"><span>Amount (' + esc(d.currency) + ')</span>' +
+        '<input class="inp money" id="pAmt" data-autofocus inputmode="decimal" value="' +
+        attr(Money.raw(Math.max(0, t.balance))) + '"></label>' +
+      '<label class="f"><span>Date</span><input class="inp" id="pDate" type="date" value="' +
+        todayISO() + '"></label>' +
+    "</div>" +
+    '<div class="grid2">' +
+      '<label class="f"><span>Method</span><select class="inp" id="pMethod">' +
+        ["Bank transfer", "Cash", "Cheque", "Card", "Online", "Other"]
+          .map((m) => '<option>' + m + "</option>").join("") + "</select></label>" +
+      '<label class="f"><span>Reference</span><input class="inp" id="pRef" ' +
+        'placeholder="Cheque no. / txn id"></label>' +
+    "</div>",
+    '<button class="btn" data-close>Cancel</button>' +
+    '<button class="btn primary" id="pSave">Record payment</button>');
+
+  $("#pSave").onclick = () => {
+    const amt = Money.parse($("#pAmt").value);
+    if (amt <= 0) { toast("Amount must be more than zero.", "err"); return; }
+    d.payments = d.payments || [];
+    d.payments.push({ id: uid(), date: $("#pDate").value || todayISO(),
+      amountCents: amt, method: $("#pMethod").value, note: $("#pRef").value.trim() });
+    if (d.status === "draft") d.status = "sent";
+    if (!fromEditor) { d.updatedAt = new Date().toISOString(); persist(true); }
+    closeModal(); render();
+    toast("Payment of " + Money.fmt(amt, d.currency) + " recorded");
+  };
+}
+
+/* --------------------------------------------------- estimate → invoice */
+function convertDlg(estId) {
+  const e = docById(estId);
+  if (!e) return;
+  const t = computeDoc(e);
+  openModal("Convert to invoice",
+    '<p style="margin:0 0 16px;color:var(--text-2);line-height:1.55">' +
+      "Estimate <b>" + esc(e.number) + "</b> for <b>" + esc(clientName(e.clientId)) +
+      "</b> becomes a new invoice. Line items, tax and discount carry over. " +
+      "The estimate stays on file, marked Converted.</p>" +
+    '<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;' +
+      'padding:12px 14px;margin-bottom:16px;display:flex;justify-content:space-between;font-size:14px">' +
+      "<span>Invoice total</span><b class=" + '"num"' + ">" +
+      Money.fmt(t.total, e.currency) + "</b></div>" +
+    '<div class="grid2">' +
+      '<label class="f"><span>Invoice number</span><input class="inp" id="vNum" value="' +
+        attr(formatNumber(S.settings.invoicePrefix, S.settings.invoiceNext)) + '"></label>' +
+      '<label class="f"><span>Issue date</span><input class="inp" id="vDate" type="date" value="' +
+        todayISO() + '"></label>' +
+    "</div>" +
+    '<label class="chk"><input type="checkbox" id="vMarkAccepted" checked>' +
+      "<span>Mark the estimate as accepted</span></label>",
+    '<button class="btn" data-close>Cancel</button>' +
+    '<button class="btn primary" id="vGo">Create invoice</button>');
+
+  $("#vGo").onclick = () => {
+    const num = $("#vNum").value.trim();
+    if (!num) { toast("Invoice needs a number.", "err"); return; }
+    if (S.docs.some((d) => d.type === "invoice" &&
+        d.number.trim().toLowerCase() === num.toLowerCase())) {
+      toast("Number " + num + " is already used.", "err"); return;
+    }
+    const issue = $("#vDate").value || todayISO();
+    const inv = JSON.parse(JSON.stringify(e));
+    inv.id = uid();
+    inv.type = "invoice";
+    inv.number = num;
+    inv.issueDate = issue;
+    inv.dueDate = addDays(issue, S.settings.paymentTermsDays);
+    inv.status = "draft";
+    inv.payments = [];
+    inv.convertedFromId = e.id;
+    inv.convertedToId = null;
+    inv.items = inv.items.map((it) => Object.assign({}, it, { id: uid() }));
+    inv.createdAt = inv.updatedAt = new Date().toISOString();
+    S.docs.push(inv);
+    S.settings.invoiceNext++;
+    e.convertedToId = inv.id;
+    if ($("#vMarkAccepted").checked) e.status = "accepted";
+    e.updatedAt = new Date().toISOString();
+    persist(true); closeModal(); go("#/doc/" + inv.id);
+    toast("Invoice " + num + " created");
+  };
+}
+
+function duplicateDoc(id) {
+  const src = docById(id); if (!src) return;
+  const isInv = src.type === "invoice";
+  const copy = JSON.parse(JSON.stringify(src));
+  copy.id = uid();
+  copy.number = formatNumber(isInv ? S.settings.invoicePrefix : S.settings.estimatePrefix,
+    isInv ? S.settings.invoiceNext : S.settings.estimateNext);
+  copy.issueDate = todayISO();
+  copy.dueDate = addDays(todayISO(), isInv ? S.settings.paymentTermsDays : S.settings.estimateValidDays);
+  copy.status = "draft";
+  copy.payments = [];
+  copy.convertedToId = null; copy.convertedFromId = null;
+  copy.items = copy.items.map((it) => Object.assign({}, it, { id: uid() }));
+  copy.createdAt = copy.updatedAt = new Date().toISOString();
+  S.docs.push(copy);
+  if (isInv) S.settings.invoiceNext++; else S.settings.estimateNext++;
+  persist(true); go("#/doc/" + copy.id);
+  toast("Duplicated as " + copy.number);
+}
+
+/* ================================================================ document */
+function viewDoc(el, id) {
+  const d = docById(id);
+  if (!d) { el.innerHTML = '<div class="empty"><h3>Document not found</h3></div>';
+    setHeader("Document", "", ""); return; }
+  const isInv = d.type === "invoice";
+  const t = computeDoc(d);
+
+  setHeader(d.number, (isInv ? "Invoice" : "Estimate") + " · " + clientName(d.clientId) +
+    " · " + Money.fmt(t.total, d.currency),
+    '<a class="btn" href="#/' + (isInv ? "invoices" : "estimates") + '">' + svg(IC.back, 15) +
+      "Back</a>" +
+    '<button class="btn" onclick="duplicateDoc(\'' + d.id + '\')">' + svg(IC.copy, 15) +
+      "Duplicate</button>" +
+    (!isInv && !d.convertedToId
+      ? '<button class="btn" onclick="convertDlg(\'' + d.id + '\')">' + svg(IC.arrow, 15) +
+        "To invoice</button>" : "") +
+    (isInv && t.balance > 0 && !["draft", "cancelled"].includes(docStatus(d))
+      ? '<button class="btn" onclick="payDlg(\'' + d.id + '\')">' + svg(IC.cash, 15) +
+        "Record payment</button>" : "") +
+    '<a class="btn" href="#/doc/' + d.id + '/edit">Edit</a>' +
+    '<button class="btn primary" onclick="window.print()">' + svg(IC.print, 15) +
+      "Print / PDF</button>");
+
+  const linked = [];
+  if (d.convertedToId && docById(d.convertedToId))
+    linked.push("Converted to invoice <a href=\"#/doc/" + d.convertedToId + "\">" +
+      esc(docById(d.convertedToId).number) + "</a>");
+  if (d.convertedFromId && docById(d.convertedFromId))
+    linked.push("From estimate <a href=\"#/doc/" + d.convertedFromId + "\">" +
+      esc(docById(d.convertedFromId).number) + "</a>");
+
+  el.innerHTML =
+    '<div class="no-print" style="display:flex;gap:10px;align-items:center;margin-bottom:16px;' +
+      'flex-wrap:wrap">' + statusBadge(d) +
+      (t.paid > 0 ? '<span style="font-size:13px;color:var(--muted)">Paid ' +
+        Money.fmt(t.paid, d.currency) + " of " + Money.fmt(t.total, d.currency) +
+        (t.balance > 0 ? ' · <b style="color:var(--danger)">' +
+          Money.fmt(t.balance, d.currency) + " outstanding</b>" : "") + "</span>" : "") +
+      (isInv && docStatus(d) === "overdue"
+        ? '<span style="font-size:13px;color:var(--danger)">' +
+          Math.abs(daysBetween(d.dueDate, todayISO())) + " days past due</span>" : "") +
+      (linked.length ? '<span style="font-size:13px;color:var(--muted)">' +
+        linked.join(" · ") + "</span>" : "") +
+      '<div class="spacer"></div>' +
+      '<span style="font-size:12px;color:var(--muted)">Tip: in the print dialog choose ' +
+      '"Save as PDF" as the destination.</span>' +
+    "</div>" +
+    '<div class="paper-wrap">' + paperHTML(d) + "</div>" +
+    (d.payments && d.payments.length ? paymentsCard(d, t) : "");
+}
+
+function paymentsCard(d, t) {
+  return '<div class="card no-print" style="margin-top:18px;max-width:640px">' +
+    '<div class="card-head"><h3>Payments received</h3><div class="right">' +
+    (t.balance > 0 ? '<button class="btn sm" onclick="payDlg(\'' + d.id +
+      '\')">Record another</button>' : "") + "</div></div>" +
+    '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Date</th><th>Method</th>' +
+    '<th>Reference</th><th class="r">Amount</th><th class="acts"></th></tr></thead><tbody>' +
+    d.payments.map((p, i) => "<tr><td>" + fmtDate(p.date) + "</td>" +
+      "<td>" + esc(p.method || "—") + "</td><td>" + esc(p.note || "—") + "</td>" +
+      '<td class="r mono-num">' + Money.fmt(p.amountCents, d.currency) + "</td>" +
+      '<td class="acts"><button class="btn sm danger" onclick="delPayment(\'' + d.id + "'," + i +
+      ')">Remove</button></td></tr>').join("") +
+    '<tr><td colspan="3"><b>Balance due</b></td><td class="r mono-num"><b' +
+    (t.balance > 0 ? ' style="color:var(--danger)"' : "") + ">" +
+    Money.fmt(t.balance, d.currency) + "</b></td><td></td></tr>" +
+    "</tbody></table></div></div>";
+}
+function delPayment(docId, i) {
+  const d = docById(docId); if (!d) return;
+  d.payments.splice(i, 1); d.updatedAt = new Date().toISOString();
+  persist(true); render(); toast("Payment removed");
+}
+
+/* ---------------------------------------------------------- paper render */
+function paperHTML(d) {
+  const co = S.company, t = computeDoc(d), isInv = d.type === "invoice";
+  const cl = clientById(d.clientId) || { name: "(no client)", addressLines: "" };
+  const st = docStatus(d);
+  const bank = co.bank || {};
+
+  const coMeta = [co.addressLines, [co.phone, co.email].filter(Boolean).join("  ·  "), co.web,
+    co.taxId ? (co.taxIdLabel || "TRN") + ": " + co.taxId : ""]
+    .filter(Boolean).join("\n");
+  const clMeta = [cl.contactName, cl.addressLines,
+    [cl.phone, cl.email].filter(Boolean).join("  ·  "),
+    cl.taxId ? (co.taxIdLabel || "TRN") + ": " + cl.taxId : ""]
+    .filter(Boolean).join("\n");
+
+  const dates = [
+    ["Issue date", fmtDate(d.issueDate)],
+    [isInv ? "Due date" : "Valid until", fmtDate(d.dueDate)]
+  ];
+  if (isInv && t.paid > 0 && t.balance <= 0) {
+    const last = d.payments.slice().sort((a, b) => a.date.localeCompare(b.date)).pop();
+    if (last) dates.push(["Paid on", fmtDate(last.date)]);
+  }
+
+  const taxOn = d.taxRateBp > 0;
+  const bankRows = [
+    ["Bank", bank.name], ["Account name", bank.accountName],
+    ["Account no.", bank.accountNumber], ["Type", bank.accountType],
+    ["Branch", bank.branch], ["Routing", bank.routing],
+    ["SWIFT", bank.swift], ["IBAN", bank.iban]
+  ].filter((r) => r[1]);
+
+  return '<div class="paper' + (S.settings.pageSize === "a4" ? " a4" : "") + '" id="paper">' +
+    '<div class="pp-top">' +
+      "<div>" +
+        (co.logo ? '<img class="pp-logo" src="' + attr(co.logo) + '" alt="">' : "") +
+        '<div class="pp-co-name">' + esc(co.name || "Your business name") + "</div>" +
+        (coMeta ? '<div class="pp-co-meta">' + esc(coMeta) + "</div>" : "") +
+      "</div>" +
+      '<div class="pp-title"><h2>' + (isInv ? "Invoice" : "Estimate") + "</h2>" +
+        '<div class="pp-num">' + esc(d.number) + "</div>" +
+        '<div class="pp-dates">' + dates.map((r) =>
+          "<div><span>" + esc(r[0]) + "</span><b>" + esc(r[1]) + "</b></div>").join("") + "</div>" +
+        (isInv && st === "paid" ? '<div class="pp-paid-stamp">PAID</div>' : "") +
+        (st === "cancelled" ? '<div class="pp-paid-stamp" style="border-color:#c0392b;color:#c0392b">VOID</div>' : "") +
+      "</div>" +
+    "</div>" +
+
+    '<div class="pp-parties">' +
+      '<div class="pp-party"><div class="lbl">' + (isInv ? "Bill to" : "Prepared for") + "</div>" +
+        '<div class="nm">' + esc(cl.name) + "</div>" +
+        (clMeta ? '<div class="meta">' + esc(clMeta) + "</div>" : "") + "</div>" +
+    "</div>" +
+
+    (d.subject ? '<div class="pp-subject"><b>Re:</b> ' + esc(d.subject) + "</div>" : "") +
+
+    '<table class="pp-items"><thead><tr>' +
+      "<th>Description</th>" +
+      '<th class="r qty">Qty</th>' +
+      '<th class="r rate">Rate</th>' +
+      '<th class="r amt">Amount</th>' +
+    "</tr></thead><tbody>" +
+    d.items.map((it, i) =>
+      "<tr>" +
+      '<td class="desc">' + (esc(it.desc) || "&nbsp;") +
+        (taxOn && it.taxable ? ' <span class="tx">(' + esc(d.taxLabel || "Tax") + ")</span>" : "") +
+        "</td>" +
+      '<td class="r qty">' + Qty.fmt(it.qtyMilli) + "</td>" +
+      '<td class="r rate">' + Money.plain(it.unitCents) + "</td>" +
+      '<td class="r amt">' + Money.plain(t.lines[i]) + "</td>" +
+      "</tr>").join("") +
+    "</tbody></table>" +
+
+    '<div class="pp-bottom">' +
+      '<div class="pp-notes">' +
+        (d.notes ? '<div class="blk"><div class="lbl">Notes</div><div class="body">' +
+          esc(d.notes) + "</div></div>" : "") +
+        (d.terms ? '<div class="blk"><div class="lbl">Terms</div><div class="body">' +
+          esc(d.terms) + "</div></div>" : "") +
+      "</div>" +
+      '<div class="pp-tot">' +
+        '<div class="l"><span>Subtotal</span><span>' +
+          esc((CURRENCIES[d.currency] || {}).symbol || "") + Money.plain(t.subtotal) + "</span></div>" +
+        (t.discount > 0 ? '<div class="l"><span>Discount' +
+          (d.discount.type === "pct" ? " (" + (d.discount.value / 100) + "%)" : "") +
+          "</span><span>−" + esc((CURRENCIES[d.currency] || {}).symbol || "") +
+          Money.plain(t.discount) + "</span></div>" : "") +
+        (taxOn ? '<div class="l"><span>' + esc(d.taxLabel || "Tax") + " " +
+          (d.taxRateBp / 100) + "%</span><span>" +
+          esc((CURRENCIES[d.currency] || {}).symbol || "") + Money.plain(t.tax) +
+          "</span></div>" : "") +
+        '<div class="l grand"><span>Total ' + esc(d.currency) + "</span><span>" +
+          esc((CURRENCIES[d.currency] || {}).symbol || "") + Money.plain(t.total) + "</span></div>" +
+        (t.paid > 0 ? '<div class="l"><span>Amount paid</span><span>−' +
+          esc((CURRENCIES[d.currency] || {}).symbol || "") + Money.plain(t.paid) +
+          "</span></div>" : "") +
+        (isInv
+          ? '<div class="l due"><span>' + (t.balance > 0 ? "Balance due" : "Paid in full") +
+            "</span><span>" + esc((CURRENCIES[d.currency] || {}).symbol || "") +
+            Money.plain(Math.max(0, t.balance)) + "</span></div>" : "") +
+      "</div>" +
+    "</div>" +
+
+    (isInv && bankRows.length ? '<div class="pp-bank"><div style="flex:1">' +
+      '<div class="lbl">Payment details</div><dl>' +
+      bankRows.map((r) => "<dt>" + esc(r[0]) + "</dt><dd>" + esc(r[1]) + "</dd>").join("") +
+      "</dl></div>" +
+      (bank.instructions ? '<div style="flex:1"><div class="lbl">How to pay</div>' +
+        '<div style="white-space:pre-line;color:#4a545e;line-height:1.5">' +
+        esc(bank.instructions) + "</div></div>" : "") +
+      "</div>" : "") +
+
+    (S.settings.footerText ? '<div class="pp-foot">' + esc(S.settings.footerText) + "</div>" : "") +
+    "</div>";
+}
+
+/* ================================================================ settings */
+function viewSettings(el) {
+  setHeader("Settings", "Your business details, tax, numbering and data",
+    '<button class="btn" onclick="exportData()">Export backup</button>' +
+    '<button class="btn primary" onclick="saveSettings()">Save settings</button>');
+
+  const co = S.company, b = co.bank, st = S.settings;
+  const v = (x) => attr(x || "");
+
+  el.innerHTML =
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:16px;align-items:start">' +
+
+    /* business */
+    '<div class="card"><div class="card-head"><h3>Your business</h3></div><div class="card-pad">' +
+      '<label class="f"><span>Logo</span>' +
+        (co.logo
+          ? '<div class="logo-prev"><img src="' + v(co.logo) + '" alt="Logo">' +
+            '<div><button class="btn sm" onclick="pickLogo()">Replace</button> ' +
+            '<button class="btn sm danger" onclick="clearLogo()">Remove</button>' +
+            '<div style="font-size:11px;color:var(--muted);margin-top:6px">' +
+            Math.round(co.logo.length / 1365) + " KB stored</div></div></div>"
+          : '<div class="logo-drop" onclick="pickLogo()">' +
+            "Click to upload a PNG or JPG<br><span style=\"font-size:11px\">" +
+            "Auto-resized to 600px wide · appears top-left on every document</span></div>") +
+        '<input type="file" id="logoFile" accept="image/*" style="display:none">' +
+      "</label>" +
+      '<label class="f"><span>Business name *</span><input class="inp" id="sName" value="' +
+        v(co.name) + '" placeholder="Elite Dev Studios"></label>' +
+      '<label class="f"><span>Address</span><textarea class="inp" id="sAddr" rows="3" ' +
+        'placeholder="12 Hope Road&#10;Kingston 6&#10;Jamaica">' + esc(co.addressLines) +
+        "</textarea></label>" +
+      '<div class="grid2">' +
+        '<label class="f"><span>Email</span><input class="inp" id="sEmail" value="' +
+          v(co.email) + '"></label>' +
+        '<label class="f"><span>Phone</span><input class="inp" id="sPhone" value="' +
+          v(co.phone) + '"></label>' +
+      "</div>" +
+      '<div class="grid2">' +
+        '<label class="f"><span>Website</span><input class="inp" id="sWeb" value="' +
+          v(co.web) + '"></label>' +
+        '<label class="f"><span>Tax ID label</span><input class="inp" id="sTaxLabel" value="' +
+          v(co.taxIdLabel) + '" placeholder="TRN"></label>' +
+      "</div>" +
+      '<label class="f" style="margin-bottom:0"><span>Your tax ID number</span>' +
+        '<input class="inp" id="sTaxId" value="' + v(co.taxId) + '"></label>' +
+    "</div></div>" +
+
+    /* bank */
+    '<div class="card"><div class="card-head"><h3>Payment details</h3>' +
+      '<div class="right" style="font-size:11.5px;color:var(--muted);align-self:center">' +
+      "Printed on invoices</div></div><div class=" + '"card-pad"' + ">" +
+      '<div class="grid2">' +
+        '<label class="f"><span>Bank</span><input class="inp" id="bName" value="' +
+          v(b.name) + '" placeholder="NCB"></label>' +
+        '<label class="f"><span>Branch</span><input class="inp" id="bBranch" value="' +
+          v(b.branch) + '"></label>' +
+      "</div>" +
+      '<label class="f"><span>Account name</span><input class="inp" id="bAccName" value="' +
+        v(b.accountName) + '"></label>' +
+      '<div class="grid2">' +
+        '<label class="f"><span>Account number</span><input class="inp" id="bAccNo" value="' +
+          v(b.accountNumber) + '"></label>' +
+        '<label class="f"><span>Account type</span><input class="inp" id="bAccType" value="' +
+          v(b.accountType) + '" placeholder="Savings / Chequing"></label>' +
+      "</div>" +
+      '<div class="grid2">' +
+        '<label class="f"><span>Routing / transit</span><input class="inp" id="bRouting" value="' +
+          v(b.routing) + '"></label>' +
+        '<label class="f"><span>SWIFT</span><input class="inp" id="bSwift" value="' +
+          v(b.swift) + '"></label>' +
+      "</div>" +
+      '<label class="f"><span>IBAN</span><input class="inp" id="bIban" value="' +
+        v(b.iban) + '"></label>' +
+      '<label class="f" style="margin-bottom:0"><span>Extra instructions</span>' +
+        '<textarea class="inp" id="bInstr" rows="3" placeholder="Please quote the invoice number ' +
+        'as the payment reference.">' + esc(b.instructions) + "</textarea></label>" +
+    "</div></div>" +
+
+    /* tax + currency */
+    '<div class="card"><div class="card-head"><h3>Tax &amp; currency</h3></div><div class="card-pad">' +
+      '<label class="chk" style="margin-bottom:14px"><input type="checkbox" id="sTaxEnabled"' +
+        (st.taxEnabled ? " checked" : "") + "><span>Charge tax on new documents</span></label>" +
+      '<div class="grid2">' +
+        '<label class="f"><span>Tax name</span><input class="inp" id="sTaxName" value="' +
+          v(st.taxLabel) + '" placeholder="GCT"></label>' +
+        '<label class="f"><span>Default rate %</span><input class="inp num" id="sTaxRate" ' +
+          'inputmode="decimal" value="' + attr(st.taxRateBp / 100) + '"></label>' +
+      "</div>" +
+      '<label class="chk" style="margin-bottom:16px"><input type="checkbox" id="sTaxDefaultOn"' +
+        (st.taxDefaultOn ? " checked" : "") + "><span>Tick new line items as taxable</span></label>" +
+      '<label class="f"><span>Default currency</span><select class="inp" id="sCurrency">' +
+        Object.keys(CURRENCIES).map((c) => '<option value="' + c + '"' +
+          (c === st.currency ? " selected" : "") + ">" + c + " · " +
+          esc(CURRENCIES[c].name) + "</option>").join("") + "</select></label>" +
+      '<label class="f" style="margin-bottom:0"><span>Currencies you can bill in</span>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:4px">' +
+        Object.keys(CURRENCIES).map((c) =>
+          '<label class="chk"><input type="checkbox" class="curChk" value="' + c + '"' +
+          ((st.enabledCurrencies || []).includes(c) ? " checked" : "") + "><span>" + c +
+          "</span></label>").join("") + "</div>" +
+        '<div style="font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.45">' +
+        "Each document keeps its own currency. Totals are reported per currency — " +
+        "there are no exchange rates, so an old invoice can never change value.</div></label>" +
+    "</div></div>" +
+
+    /* numbering + defaults */
+    '<div class="card"><div class="card-head"><h3>Numbering &amp; defaults</h3></div>' +
+      '<div class="card-pad">' +
+      '<div class="grid2">' +
+        '<label class="f"><span>Invoice pattern</span><input class="inp" id="sInvPre" value="' +
+          v(st.invoicePrefix) + '"></label>' +
+        '<label class="f"><span>Next number</span><input class="inp num" id="sInvNext" value="' +
+          attr(st.invoiceNext) + '"></label>' +
+      "</div>" +
+      '<div class="grid2">' +
+        '<label class="f"><span>Estimate pattern</span><input class="inp" id="sEstPre" value="' +
+          v(st.estimatePrefix) + '"></label>' +
+        '<label class="f"><span>Next number</span><input class="inp num" id="sEstNext" value="' +
+          attr(st.estimateNext) + '"></label>' +
+      "</div>" +
+      '<div style="font-size:11.5px;color:var(--muted);margin:-4px 0 14px;line-height:1.5">' +
+        "Tokens: <b>{YYYY}</b> year · <b>{YY}</b> short year · <b>{MM}</b> month · " +
+        "<b>{DD}</b> day · <b>####</b> zero-padded counter.<br>Next invoice: <b>" +
+        esc(formatNumber(st.invoicePrefix, st.invoiceNext)) + "</b></div>" +
+      '<div class="grid2">' +
+        '<label class="f"><span>Payment terms (days)</span><input class="inp num" id="sTerms" value="' +
+          attr(st.paymentTermsDays) + '"></label>' +
+        '<label class="f"><span>Estimate valid (days)</span><input class="inp num" id="sValid" value="' +
+          attr(st.estimateValidDays) + '"></label>' +
+      "</div>" +
+      '<label class="f"><span>Default notes</span><textarea class="inp" id="sNotes" rows="2">' +
+        esc(st.defaultNotes) + "</textarea></label>" +
+      '<label class="f"><span>Default terms</span><textarea class="inp" id="sTermsTxt" rows="2">' +
+        esc(st.defaultTerms) + "</textarea></label>" +
+      '<label class="f"><span>Document footer</span><input class="inp" id="sFooter" value="' +
+        v(st.footerText) + '" placeholder="Thank you for your business"></label>' +
+      '<label class="f" style="margin-bottom:0"><span>Page size</span>' +
+        '<select class="inp" id="sPage">' +
+        '<option value="letter"' + (st.pageSize === "letter" ? " selected" : "") +
+          '>US Letter (8.5 × 11 in)</option>' +
+        '<option value="a4"' + (st.pageSize === "a4" ? " selected" : "") +
+          ">A4 (210 × 297 mm)</option></select></label>" +
+    "</div></div>" +
+
+    /* data */
+    '<div class="card"><div class="card-head"><h3>Your data</h3></div><div class="card-pad">' +
+      dataStatusBlock() +
+      '<div class="dsec">' +
+        '<div class="dsec-t">Backup &amp; restore</div>' +
+        '<div class="dsec-b">A backup is a single .json file holding everything — ' +
+          "clients, documents, logo and settings. Keep one somewhere safe.</div>" +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+          '<button class="btn primary" onclick="exportData()">Export backup</button>' +
+          '<button class="btn" onclick="importData()">Import backup</button>' +
+        "</div>" +
+      "</div>" +
+      diskLinkBlock() +
+      '<div class="dsec">' +
+        '<div class="dsec-t">Danger zone</div>' +
+        '<button class="btn danger" onclick="resetAll()">Erase everything</button>' +
+      "</div>" +
+    "</div></div>" +
+
+    "</div>";
+
+  $("#logoFile").onchange = (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (f) loadLogo(f);
+  };
+}
+
+/* ------------------------------------------------- settings · Your data */
+function dataSize() {
+  try { return JSON.stringify(S).length; } catch (e) { return 0; }
+}
+function dataStatusBlock() {
+  const kb = Math.round(dataSize() / 1024);
+  const last = S.settings.lastExport;
+  const days = last ? daysBetween(last, todayISO()) : null;
+  const stale = days === null || days > 14;
+  const rows = [
+    ["Saving to", esc(Store.label()) + (Store.fileHandle
+      ? ' <span style="color:var(--ok)">· live file</span>'
+      : ' <span style="color:var(--muted)">· this browser only</span>')],
+    ["Stored", S.clients.length + " client" + (S.clients.length === 1 ? "" : "s") + " · " +
+      S.docs.length + " document" + (S.docs.length === 1 ? "" : "s") + " · " + kb + " KB"],
+    ["Last backup", last
+      ? esc(fmtDate(last)) + (days > 0 ? ' <span style="color:' +
+        (stale ? "var(--warn)" : "var(--muted)") + '">· ' + days + " days ago</span>" : "")
+      : '<span style="color:var(--warn)">Never</span>']
+  ];
+  return '<div style="background:var(--surface-2);border:1px solid var(--border);' +
+    'border-radius:8px;padding:12px 14px;margin-bottom:4px;font-size:12.5px">' +
+    rows.map((r) => '<div style="display:flex;gap:12px;padding:3px 0">' +
+      '<span style="color:var(--muted);flex:0 0 92px">' + esc(r[0]) + "</span>" +
+      "<span>" + r[1] + "</span></div>").join("") +
+    "</div>";
+}
+
+function diskLinkBlock() {
+  const sup = Store.fileSupport();
+  const head = '<div class="dsec"><div class="dsec-t">Live copy on disk</div>';
+  const err = Store.fileError
+    ? '<div style="background:var(--danger-soft);border:1px solid ' +
+      'color-mix(in srgb,var(--danger) 30%,transparent);color:var(--danger);border-radius:6px;' +
+      'padding:8px 11px;margin-bottom:10px;font-size:12px;line-height:1.45">' +
+      "<b>Last attempt failed:</b> " + esc(Store.fileError) + "</div>"
+    : "";
+
+  // already linked
+  if (Store.fileHandle) {
+    return head + err +
+      '<div class="dsec-b">Every change writes straight to <b>' + esc(Store.fileName) +
+      "</b>. Keep that file in Dropbox, iCloud or OneDrive and your data is backed up " +
+      "continuously.</div>" +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+      '<button class="btn" onclick="linkDiskFile()">Change file</button>' +
+      '<button class="btn" onclick="openDiskFile()">Open a different file</button>' +
+      '<button class="btn" onclick="unlinkDiskFile()">Unlink</button></div></div>';
+  }
+
+  // linked previously, needs permission again after a reload
+  if (Store.pendingHandle) {
+    return head + err +
+      '<div class="dsec-b">You linked <b>' + esc(Store.pendingName) +
+      "</b> before. Browsers drop file permission when the page reloads, so it needs " +
+      "one click to reconnect.</div>" +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+      '<button class="btn primary" onclick="reconnectFile()">Reconnect to ' +
+      esc(Store.pendingName) + "</button>" +
+      '<button class="btn" onclick="unlinkDiskFile()">Forget it</button></div></div>';
+  }
+
+  // supported and available
+  if (sup.ok) {
+    return head + err +
+      '<div class="dsec-b">Pick a .json file and every change writes straight to it — ' +
+      "no exporting to remember. Put it in Dropbox or iCloud for automatic offsite " +
+      "backup, and use <i>Open from disk</i> to pick it up on another machine.</div>" +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+      '<button class="btn primary" onclick="linkDiskFile()">Link a file on disk</button>' +
+      '<button class="btn" onclick="openDiskFile()">Open from disk</button></div></div>';
+  }
+
+  // not available — say exactly why, and what to do instead
+  const reasons = {
+    "file-origin":
+      "Not available when the app is opened by double-clicking the file. Browsers give " +
+      "<code>file://</code> pages no origin, and refuse them direct disk access — a " +
+      "security rule, not something the app can switch off.",
+    browser:
+      "Your browser doesn't support writing directly to a file. Chrome and Edge do; " +
+      "Safari and Firefox don't.",
+    insecure:
+      "Only available on a secure page (https or localhost)."
+  };
+  return head + err +
+    '<div class="dsec-b">' + reasons[sup.why] + "</div>" +
+    '<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:6px;' +
+    'padding:11px 13px;font-size:12.5px;line-height:1.55;color:var(--text-2)">' +
+    "<b>Use Export backup instead.</b> It works everywhere and produces the same file." +
+    (sup.why === "file-origin"
+      ? "<br><br>If you want the live-file version, the app has to be served rather than " +
+        "double-clicked. In a terminal, from the folder holding this file:" +
+        '<br><code style="display:inline-block;margin-top:6px;background:var(--surface-3);' +
+        'padding:4px 8px;border-radius:4px;font-size:12px">python3 -m http.server 8000</code>' +
+        '<br>then open <code>http://localhost:8000/PullScrewInvoice.html</code>.'
+      : "") +
+    "</div></div>";
+}
+
+function saveSettings() {
+  const co = S.company, b = co.bank, st = S.settings;
+  const val = (id) => { const e = $("#" + id); return e ? e.value.trim() : ""; };
+  const int = (id, def) => { const n = parseInt(val(id), 10); return isNaN(n) ? def : n; };
+
+  co.name = val("sName"); co.addressLines = val("sAddr");
+  co.email = val("sEmail"); co.phone = val("sPhone"); co.web = val("sWeb");
+  co.taxIdLabel = val("sTaxLabel") || "TRN"; co.taxId = val("sTaxId");
+
+  b.name = val("bName"); b.branch = val("bBranch"); b.accountName = val("bAccName");
+  b.accountNumber = val("bAccNo"); b.accountType = val("bAccType");
+  b.routing = val("bRouting"); b.swift = val("bSwift"); b.iban = val("bIban");
+  b.instructions = val("bInstr");
+
+  st.taxEnabled = $("#sTaxEnabled").checked;
+  st.taxLabel = val("sTaxName") || "Tax";
+  st.taxRateBp = Math.round(clamp(parseFloat(val("sTaxRate")) || 0, 0, 100) * 100);
+  st.taxDefaultOn = $("#sTaxDefaultOn").checked;
+  st.currency = $("#sCurrency").value;
+  st.enabledCurrencies = $$(".curChk").filter((c) => c.checked).map((c) => c.value);
+  if (!st.enabledCurrencies.length) st.enabledCurrencies = [st.currency];
+  if (!st.enabledCurrencies.includes(st.currency)) st.enabledCurrencies.unshift(st.currency);
+
+  st.invoicePrefix = val("sInvPre") || "INV-{####}";
+  st.invoiceNext = Math.max(1, int("sInvNext", 1));
+  st.estimatePrefix = val("sEstPre") || "EST-{####}";
+  st.estimateNext = Math.max(1, int("sEstNext", 1));
+  st.paymentTermsDays = clamp(int("sTerms", 30), 0, 365);
+  st.estimateValidDays = clamp(int("sValid", 30), 0, 365);
+  st.defaultNotes = val("sNotes"); st.defaultTerms = val("sTermsTxt");
+  st.footerText = val("sFooter");
+  st.pageSize = $("#sPage").value;
+
+  persist(true); render(); toast("Settings saved");
+}
+
+/* ------------------------------------------------------------------ logo */
+function pickLogo() { $("#logoFile").click(); }
+function clearLogo() {
+  S.company.logo = ""; persist(true); render(); toast("Logo removed");
+}
+function loadLogo(file) {
+  if (!/^image\//.test(file.type)) { toast("Pick an image file.", "err"); return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const maxW = 600, maxH = 300;
+      let w = img.width, h = img.height;
+      const scale = Math.min(1, maxW / w, maxH / h);
+      w = Math.round(w * scale); h = Math.round(h * scale);
+      const cv = document.createElement("canvas");
+      cv.width = w; cv.height = h;
+      const cx = cv.getContext("2d");
+      cx.imageSmoothingQuality = "high";
+      cx.drawImage(img, 0, 0, w, h);
+      // PNG keeps transparency; fall back to JPEG if the PNG is huge
+      let out = cv.toDataURL("image/png");
+      if (out.length > 300000) {
+        const cv2 = document.createElement("canvas");
+        cv2.width = w; cv2.height = h;
+        const c2 = cv2.getContext("2d");
+        c2.fillStyle = "#fff"; c2.fillRect(0, 0, w, h);
+        c2.drawImage(img, 0, 0, w, h);
+        out = cv2.toDataURL("image/jpeg", 0.86);
+      }
+      S.company.logo = out;
+      persist(true); render();
+      toast("Logo updated");
+    };
+    img.onerror = () => toast("Couldn't read that image.", "err");
+    img.src = reader.result;
+  };
+  reader.onerror = () => toast("Couldn't read that file.", "err");
+  reader.readAsDataURL(file);
+}
+
+/* ---------------------------------------------------------- import/export */
+function exportData() {
+  S.settings.lastExport = todayISO();
+  persist(true);
+  const blob = new Blob([JSON.stringify(S, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const slug = (S.company.name || "pullscrew").toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "pullscrew";
+  a.href = url;
+  a.download = slug + "-invoices-" + todayISO() + ".json";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+  render();
+  toast("Backup downloaded");
+}
+
+function importData() {
+  const inp = document.createElement("input");
+  inp.type = "file"; inp.accept = "application/json,.json";
+  inp.onchange = () => {
+    const f = inp.files && inp.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      let data;
+      try { data = JSON.parse(r.result); }
+      catch (e) { toast("That file isn't valid JSON.", "err"); return; }
+      if (!data || !Array.isArray(data.docs) || !Array.isArray(data.clients)) {
+        toast("That doesn't look like a PullScrew backup.", "err"); return;
+      }
+      confirmDlg("Replace all data?",
+        "This backup holds <b>" + data.clients.length + " clients</b> and <b>" +
+        data.docs.length + " documents</b>. It will replace everything currently stored " +
+        "(" + S.clients.length + " clients, " + S.docs.length + " documents).",
+        "Replace everything", () => {
+          S = migrate(data);
+          persist(true); go("#/dashboard"); render();
+          toast("Backup restored");
+        }, true);
+    };
+    r.readAsText(f);
+  };
+  inp.click();
+}
+
+async function linkDiskFile() {
+  try {
+    const name = await Store.linkFile(S);
+    render(); toast("Now saving to " + name);
+  } catch (e) {
+    if (e && e.name === "AbortError") return;          // user closed the picker
+    Store.fileError = (e && (e.message || e.name)) || "unknown error";
+    render();
+    toast("Couldn't link that file — see Your data for the reason.", "err");
+  }
+}
+
+// A handle restored from IndexedDB usually comes back needing permission again,
+// and requestPermission() only works inside a user gesture — hence the button.
+async function reconnectFile() {
+  const h = Store.pendingHandle;
+  if (!h) return;
+  try {
+    const perm = await h.requestPermission({ mode: "readwrite" });
+    if (perm !== "granted") { toast("Permission denied.", "err"); return; }
+    Store.fileHandle = h; Store.fileName = h.name;
+    Store.pendingHandle = null; Store.fileError = "";
+    const txt = await (await h.getFile()).text();
+    if (txt.trim()) S = migrate(JSON.parse(txt));
+    persist(true); render();
+    toast("Reconnected to " + h.name);
+  } catch (e) {
+    Store.fileError = (e && (e.message || e.name)) || "unknown error";
+    render(); toast("Couldn't reconnect.", "err");
+  }
+}
+
+async function unlinkDiskFile() {
+  await Store.unlinkFile();
+  render(); toast("Disk file unlinked — saving to this browser only");
+}
+
+async function openDiskFile() {
+  try {
+    const data = await Store.openFile();
+    if (!data || !Array.isArray(data.docs)) { toast("That file isn't a PullScrew backup.", "err"); return; }
+    confirmDlg("Load this file?",
+      "It holds <b>" + (data.clients || []).length + " clients</b> and <b>" +
+      data.docs.length + " documents</b>, and will replace what's stored here now. " +
+      "Future changes save straight to that file.",
+      "Load it", () => {
+        S = migrate(data); persist(true); go("#/dashboard"); render();
+        toast("Loaded from disk");
+      }, true);
+  } catch (e) {
+    if (e && e.name === "AbortError") return;
+    Store.fileError = (e && (e.message || e.name)) || "unknown error";
+    render(); toast("Couldn't open that file — see Your data for the reason.", "err");
+  }
+}
+
+function resetAll() {
+  confirmDlg("Erase everything?",
+    "All " + S.clients.length + " clients and " + S.docs.length +
+    " documents will be deleted from this device. Export a backup first if you might want them back.",
+    "Erase everything", () => {
+      const keepFile = Store.fileHandle;
+      S = blankState();
+      Store.fileHandle = keepFile;
+      persist(true); go("#/dashboard"); render();
+      toast("Everything erased");
+    }, true);
+}
+
+/* ------------------------------------------------------------------ theme */
+function applyTheme() {
+  const t = S.settings.theme || "system";
+  const dark = t === "dark" || (t === "system" &&
+    window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+}
+$("#themeBtn").onclick = () => {
+  const order = ["system", "light", "dark"];
+  const i = order.indexOf(S.settings.theme || "system");
+  S.settings.theme = order[(i + 1) % 3];
+  persist(); applyTheme();
+  toast("Theme: " + S.settings.theme);
+};
+if (window.matchMedia) {
+  window.matchMedia("(prefers-color-scheme: dark)")
+    .addEventListener("change", () => { if ((S.settings.theme || "system") === "system") applyTheme(); });
+}
+
+/* --------------------------------------------------------------- shortcuts */
+document.addEventListener("keydown", (e) => {
+  const mod = e.metaKey || e.ctrlKey;
+  if (mod && e.key.toLowerCase() === "s" && route.name === "edit") {
+    e.preventDefault(); saveDraft(true);
+  }
+  if (mod && e.key.toLowerCase() === "p" && route.name === "view") {
+    // let the browser handle it — the print stylesheet does the rest
+  }
+});
+
+// warn before losing an unsaved draft on close
+window.addEventListener("beforeunload", (e) => {
+  if (draft && route.name === "edit") { e.preventDefault(); e.returnValue = ""; }
+});
+
+/* ------------------------------------------------------------------- boot */
+(async function boot() {
+  await Store.init();
+
+  // If a disk file was linked before, it is the source of truth — read it back.
+  // Permission usually needs re-granting after a reload, which requires a click,
+  // so park the handle and let the Settings screen offer Reconnect.
+  let loaded = null;
+  if (Store.fileSupport().ok) {
+    const h = await Store.loadHandle();
+    if (h && typeof h.queryPermission === "function") {
+      try {
+        Store.pendingName = h.name || "the linked file";
+        const perm = await h.queryPermission({ mode: "readwrite" });
+        if (perm === "granted") {
+          Store.fileHandle = h; Store.fileName = h.name;
+          const txt = await (await h.getFile()).text();
+          if (txt.trim()) loaded = JSON.parse(txt);
+        } else {
+          Store.pendingHandle = h;
+        }
+      } catch (e) {
+        Store.pendingHandle = h;
+        Store.fileError = (e && (e.message || e.name)) || "couldn't read the linked file";
+      }
+    }
+  }
+
+  if (!loaded) loaded = await Store.load();
+  S = migrate(loaded);
+  if (!loaded) {
+    // seed sensible Jamaican defaults on very first run
+    S.settings.taxLabel = "GCT";
+    S.settings.taxRateBp = 1500;
+    S.settings.currency = "JMD";
+    S.company.taxIdLabel = "TRN";
+    S.settings.defaultTerms = "Payment due within 30 days of the invoice date.";
+    S.settings.defaultNotes = "Thank you for your business.";
+  }
+  route = parseHash();
+  if (!location.hash) location.hash = "#/dashboard";
+  render();
+  if (!loaded) persist(true);
+})();
+
+// expose the handful of things inline handlers call
+Object.assign(window, {
+  go, setFilter, setSearch, clientDlg, renderKeepFocus, addItem, rmItem, upItem, autoGrow,
+  setDiscountType, setDiscountValue, toggleTax, setTaxRate, setIssueDate, rmPayment,
+  quickClient, cancelEdit, saveDraft, deleteDoc, payDlg, convertDlg, duplicateDoc,
+  delPayment, saveSettings, pickLogo, clearLogo, exportData, importData, linkDiskFile,
+  openDiskFile, resetAll, renderSoft, patchAmounts, reconnectFile, unlinkDiskFile
+});
+</script>
+</body>
+</html>
