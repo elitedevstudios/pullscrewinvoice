@@ -2,8 +2,23 @@
 
 One file. Double-click it. That's the whole install.
 
-`PullScrewInvoice.html` — 119 KB, opens in any browser on macOS, Windows, Linux or iPad.
+`PullScrewInvoice.html` — 130 KB, opens in any browser on macOS, Windows, Linux or iPad.
 No Node, no Rust, no build step, no internet connection, ever.
+
+## Two ways to run it
+
+**Double-click `PullScrewInvoice.html`** — simplest. Everything works except live-file
+saving. Turn on *daily automatic backup* in Settings.
+
+**Double-click `Start PullScrew Invoice.command`** (macOS) or `.bat` (Windows) — serves
+the app at `http://localhost:8777` and opens it. Same app, but now
+**Settings → Link a file on disk** works, and every change writes straight to a `.json`
+file the instant you make it. Leave the small terminal window open while you work;
+closing it stops the app. Needs Python, which macOS has.
+
+> **The two are separate.** Browsers key storage to the origin, so data entered by
+> double-clicking is *not* visible when launched via localhost, and vice versa. Pick one
+> and stay with it. To switch: Export backup from the old one, Import into the new one.
 
 ---
 
@@ -33,8 +48,18 @@ which one is in use.
 **Browser storage can be wiped** by clearing site data, and it is per-browser: open the
 file in Safari and you won't see data you entered in Chrome. So:
 
-- **Export a backup** (Settings → Export backup) — writes a `.json` file you keep.
-  The app nags you if it's been more than two weeks. This works everywhere, always.
+There are three levels of safety net, weakest to strongest:
+
+1. **Export backup** (Settings → Export backup) — manual, writes a `.json` you keep.
+   Works everywhere, always. The app nags you if it's been more than two weeks.
+2. **Daily automatic backup** (Settings → Automatic backup) — downloads a backup by
+   itself the first time you save each day. One file per day into Downloads, so tidy it
+   out occasionally. Your browser may ask permission the first time it fires.
+   Works when double-clicked.
+3. **Live copy on disk** — every change writes straight to a `.json` you choose. Put it
+   in Dropbox or iCloud and it backs itself up continuously. **Requires the launcher**
+   (see below). This is the strongest option and switches off the daily download, since
+   it makes it redundant.
 
 ### About "Link a file on disk"
 
@@ -46,15 +71,13 @@ Browsers give `file://` pages no origin, and the File System Access API refuses 
 without one. Nothing the app can do changes that. Settings → Your data explains this in
 place rather than offering a button that fails.
 
-If you want it, the file has to be *served* rather than double-clicked. From the folder
-holding the file:
+To use it, run the app through **`Start PullScrew Invoice.command`** (macOS) or
+**`.bat`** (Windows) instead. Those serve the file at `http://localhost:8777`, which
+gives the page a real origin and unlocks the feature. Chrome or Edge only — Safari and
+Firefox don't implement the API at all.
 
-```
-python3 -m http.server 8000
-```
-
-then open `http://localhost:8000/PullScrewInvoice.html`. Chrome or Edge only — Safari
-and Firefox don't implement the API at all.
+The port is fixed at 8777 deliberately. Storage is keyed to the origin and the origin
+includes the port, so changing it would make the app look empty.
 
 Once linked, the app remembers the file across reloads. Browsers still drop write
 permission on every page load, so Settings shows a one-click **Reconnect** button; after
